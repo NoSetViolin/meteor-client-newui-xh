@@ -8,6 +8,7 @@ package meteordevelopment.meteorclient.gui;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
 import meteordevelopment.meteorclient.gui.renderer.GuiRenderer;
+import meteordevelopment.meteorclient.gui.screens.ModuleScreen;
 import meteordevelopment.meteorclient.gui.screens.settings.*;
 import meteordevelopment.meteorclient.gui.themes.meteor.widgets.WMeteorLabel;
 import meteordevelopment.meteorclient.gui.utils.Cell;
@@ -101,7 +102,7 @@ public class DefaultSettingsWidgetFactory extends SettingsWidgetFactory {
 
     // If a different theme uses has different heights of widgets this can method can be overwritten to account for it in the setting titles
     protected double settingTitleTopMargin() {
-        return 6;
+        return mc.gui.screen() instanceof ModuleScreen ? 3 : 6;
     }
 
     private void group(WVerticalList list, SettingGroup group, String filter, List<RemoveInfo> removeInfoList) {
@@ -109,6 +110,10 @@ public class DefaultSettingsWidgetFactory extends SettingsWidgetFactory {
         section.action = () -> group.sectionExpanded = section.isExpanded();
 
         WTable table = section.add(theme.table()).expandX().widget();
+        if (mc.gui.screen() instanceof ModuleScreen) {
+            table.horizontalSpacing = 8;
+            table.verticalSpacing = 5;
+        }
 
         RemoveInfo removeInfo = null;
 

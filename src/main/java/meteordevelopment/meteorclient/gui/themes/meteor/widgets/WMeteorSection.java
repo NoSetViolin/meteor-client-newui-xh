@@ -6,10 +6,13 @@
 package meteordevelopment.meteorclient.gui.themes.meteor.widgets;
 
 import meteordevelopment.meteorclient.gui.renderer.GuiRenderer;
+import meteordevelopment.meteorclient.gui.themes.meteor.MeteorGuiTheme;
 import meteordevelopment.meteorclient.gui.themes.meteor.MeteorWidget;
 import meteordevelopment.meteorclient.gui.widgets.WWidget;
 import meteordevelopment.meteorclient.gui.widgets.containers.WSection;
 import meteordevelopment.meteorclient.gui.widgets.pressable.WTriangle;
+
+import static meteordevelopment.meteorclient.gui.themes.meteor.ModernWidgetStyle.isModuleDetails;
 
 public class WMeteorSection extends WSection {
     public WMeteorSection(String title, boolean expanded, WWidget headerWidget) {
@@ -30,7 +33,12 @@ public class WMeteorSection extends WSection {
 
         @Override
         public void init() {
-            add(theme.horizontalSeparator(title)).expandX();
+            if (isModuleDetails()) {
+                add(theme.label(title, false).color(((MeteorGuiTheme) theme).accentColor.get())).padLeft(2);
+                add(theme.horizontalSeparator()).expandX().centerY();
+            } else {
+                add(theme.horizontalSeparator(title)).expandX();
+            }
 
             if (headerWidget != null) add(headerWidget);
 

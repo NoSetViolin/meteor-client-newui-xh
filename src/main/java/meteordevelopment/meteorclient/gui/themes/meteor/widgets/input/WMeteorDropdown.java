@@ -11,9 +11,16 @@ import meteordevelopment.meteorclient.gui.themes.meteor.MeteorWidget;
 import meteordevelopment.meteorclient.gui.widgets.input.WDropdown;
 import meteordevelopment.meteorclient.utils.render.color.Color;
 
+import static meteordevelopment.meteorclient.gui.themes.meteor.ModernWidgetStyle.isModuleDetails;
+
 public class WMeteorDropdown<T> extends WDropdown<T> implements MeteorWidget {
     public WMeteorDropdown(T[] values, T value) {
         super(values, value);
+    }
+
+    @Override
+    public double pad() {
+        return isModuleDetails() ? theme.scale(4) : super.pad();
     }
 
     @Override
