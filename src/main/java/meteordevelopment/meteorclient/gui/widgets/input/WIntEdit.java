@@ -33,14 +33,16 @@ public class WIntEdit extends WHorizontalList {
 
     @Override
     public void init() {
-        textBox = add(theme.textBox(Integer.toString(value), this::filter)).minWidth(75).widget();
+        spacing = 7;
 
         if (noSlider) {
+            textBox = add(theme.textBox(Integer.toString(value), this::filter)).minWidth(54).expandX().widget();
             add(theme.button("+")).widget().action = () -> setButton(get() + 1);
             add(theme.button("-")).widget().action = () -> setButton(get() - 1);
         }
         else {
-            slider = add(theme.slider(value, sliderMin, sliderMax)).minWidth(small ? 200 - 75 - spacing : 200).centerY().expandX().widget();
+            slider = add(theme.slider(value, sliderMin, sliderMax)).minWidth(small ? 92 : 122).centerY().expandX().widget();
+            textBox = add(theme.textBox(Integer.toString(value), this::filter)).minWidth(54).widget();
         }
 
         textBox.actionOnUnfocused = () -> {

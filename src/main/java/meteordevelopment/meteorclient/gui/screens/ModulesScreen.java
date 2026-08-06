@@ -327,7 +327,7 @@ public class ModulesScreen extends TabScreen {
         }
 
         private void renderRoundedLeftBlur(GuiRenderer renderer, GpuTextureView texture, double radius) {
-            renderRoundedBands((sx, sy, sw, sh) -> {
+            renderBlurBands((sx, sy, sw, sh) -> {
                 double clipWidth = x + sidebarWidth() - sx;
                 renderer.scissorStart(sx, sy, clipWidth, sh);
                 renderer.texture(0, 0, getWindowWidth(), getWindowHeight(), 0, texture);
@@ -336,15 +336,15 @@ public class ModulesScreen extends TabScreen {
         }
 
         private void renderRounded(GuiRenderer renderer, double rx, double ry, double rw, double rh, double radius, Color color) {
-            renderRoundedBands((sx, sy, sw, sh) -> renderer.quad(sx, sy, sw, sh, color), rx, ry, rw, rh, radius);
+            renderer.roundedQuad(rx, ry, rw, rh, radius, color);
         }
 
         private void renderRoundedLeft(GuiRenderer renderer, double rx, double ry, double rw, double rh, double radius, Color color) {
-            renderRoundedBands((sx, sy, sw, sh) -> renderer.quad(sx, sy, Math.max(0, rx + rw - sx), sh, color), rx, ry, rw, rh, radius);
+            renderer.roundedLeftQuad(rx, ry, rw, rh, radius, color);
         }
 
-        private void renderRoundedBands(BandRenderer renderer, double rx, double ry, double rw, double rh, double radius) {
-            int bands = 5;
+        private void renderBlurBands(BandRenderer renderer, double rx, double ry, double rw, double rh, double radius) {
+            int bands = Math.max(8, (int) Math.ceil(radius));
             double bandHeight = radius / bands;
             for (int i = 0; i < bands; i++) {
                 double midpoint = (i + 0.5) * bandHeight;

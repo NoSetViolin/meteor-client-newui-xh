@@ -160,20 +160,29 @@ public class ModuleScreen extends WidgetScreen {
             view.clear();
 
             WHorizontalList columns = theme.horizontalList();
-            columns.spacing = 12;
+            columns.spacing = 16;
             WVerticalList left = theme.verticalList();
             WVerticalList right = theme.verticalList();
-            left.spacing = 10;
-            right.spacing = 10;
+            left.spacing = 12;
+            right.spacing = 12;
             columns.add(left).expandX();
             columns.add(right).expandX();
 
-            int index = 0;
+            int leftWeight = 0;
+            int rightWeight = 0;
             for (SettingGroup group : module.settings.groups) {
                 Settings singleGroup = new Settings();
                 singleGroup.groups.add(group);
-                WVerticalList target = (index++ & 1) == 0 ? left : right;
+                int groupWeight = 1;
+                for (Setting<?> setting : group) {
+                    if (setting.isVisible()) groupWeight++;
+                }
+
+                boolean addLeft = leftWeight <= rightWeight;
+                WVerticalList target = addLeft ? left : right;
                 target.add(theme.settings(singleGroup)).expandX();
+                if (addLeft) leftWeight += groupWeight;
+                else rightWeight += groupWeight;
             }
 
             WSection moduleSection = theme.section("Module", true);
@@ -195,9 +204,11 @@ public class ModuleScreen extends WidgetScreen {
             feedbackToggle.action = () -> module.chatFeedback = feedbackToggle.checked;
 
             WHorizontalList sharing = moduleSection.add(theme.horizontalList()).expandX().widget();
-            WButton copy = sharing.add(theme.button("Copy config")).expandX().widget();
+            sharing.spacing = 6;
+            sharing.add(theme.label("Configuration")).expandCellX().centerY();
+            WButton copy = sharing.add(theme.button("Copy")).widget();
             copy.action = ModuleScreen.this::toClipboard;
-            WButton paste = sharing.add(theme.button("Paste config")).expandX().widget();
+            WButton paste = sharing.add(theme.button("Paste")).widget();
             paste.action = ModuleScreen.this::fromClipboard;
             right.add(moduleSection).expandX();
 
@@ -286,7 +297,7 @@ public class ModuleScreen extends WidgetScreen {
         }
 
         private void renderRoundedTopBlur(GuiRenderer renderer, GpuTextureView texture, double radius) {
-            int bands = 5;
+            int bands = Math.max(8, (int) Math.ceil(radius));
             double bandHeight = radius / bands;
             for (int i = 0; i < bands; i++) {
                 double midpoint = (i + 0.5) * bandHeight;
@@ -304,32 +315,11 @@ public class ModuleScreen extends WidgetScreen {
         }
 
         private void renderRounded(GuiRenderer renderer, double rx, double ry, double rw, double rh, double radius, Color color) {
-            renderBands((sx, sy, sw, sh) -> renderer.quad(sx, sy, sw, sh, color), rx, ry, rw, rh, radius);
+            renderer.roundedQuad(rx, ry, rw, rh, radius, color);
         }
 
         private void renderRoundedTop(GuiRenderer renderer, double rx, double ry, double rw, double rh, double radius, Color color) {
-            int bands = 5;
-            double bandHeight = radius / bands;
-            for (int i = 0; i < bands; i++) {
-                double midpoint = (i + 0.5) * bandHeight;
-                double circleY = radius - midpoint;
-                double inset = radius - Math.sqrt(Math.max(0, radius * radius - circleY * circleY));
-                renderer.quad(rx + inset, ry + i * bandHeight, rw - inset * 2, bandHeight, color);
-            }
-            renderer.quad(rx, ry + radius, rw, rh - radius, color);
-        }
-
-        private void renderBands(BandRenderer renderer, double rx, double ry, double rw, double rh, double radius) {
-            int bands = 5;
-            double bandHeight = radius / bands;
-            for (int i = 0; i < bands; i++) {
-                double midpoint = (i + 0.5) * bandHeight;
-                double circleY = radius - midpoint;
-                double inset = radius - Math.sqrt(Math.max(0, radius * radius - circleY * circleY));
-                renderer.render(rx + inset, ry + i * bandHeight, rw - inset * 2, bandHeight);
-                renderer.render(rx + inset, ry + rh - (i + 1) * bandHeight, rw - inset * 2, bandHeight);
-            }
-            renderer.render(rx, ry + radius, rw, Math.max(0, rh - radius * 2));
+            renderer.roundedTopQuad(rx, ry, rw, rh, radius, color);
         }
 
         @Override
@@ -363,10 +353,6 @@ public class ModuleScreen extends WidgetScreen {
             savedY = y;
         }
 
-        @FunctionalInterface
-        private interface BandRenderer {
-            void render(double x, double y, double width, double height);
-        }
     }
 
     private final class WBackButton extends WPressable {
@@ -437,15 +423,6 @@ public class ModuleScreen extends WidgetScreen {
 
     private void renderControl(GuiRenderer renderer, WWidget widget, Color color) {
         double radius = theme.scale(7);
-        int bands = 5;
-        double bandHeight = radius / bands;
-        for (int i = 0; i < bands; i++) {
-            double midpoint = (i + 0.5) * bandHeight;
-            double circleY = radius - midpoint;
-            double inset = radius - Math.sqrt(Math.max(0, radius * radius - circleY * circleY));
-            renderer.quad(widget.x + inset, widget.y + i * bandHeight, widget.width - inset * 2, bandHeight, color);
-            renderer.quad(widget.x + inset, widget.y + widget.height - (i + 1) * bandHeight, widget.width - inset * 2, bandHeight, color);
-        }
-        renderer.quad(widget.x, widget.y + radius, widget.width, Math.max(0, widget.height - radius * 2), color);
+        renderer.roundedQuad(widget.x, widget.y, widget.width, widget.height, radius, color);
     }
 }

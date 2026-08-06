@@ -11,9 +11,16 @@ import meteordevelopment.meteorclient.gui.themes.meteor.MeteorGuiTheme;
 import meteordevelopment.meteorclient.gui.themes.meteor.MeteorWidget;
 import meteordevelopment.meteorclient.gui.widgets.pressable.WButton;
 
+import static meteordevelopment.meteorclient.gui.themes.meteor.ModernWidgetStyle.isModuleDetails;
+
 public class WMeteorButton extends WButton implements MeteorWidget {
     public WMeteorButton(String text, GuiTexture texture) {
         super(text, texture);
+    }
+
+    @Override
+    public double pad() {
+        return isModuleDetails() ? theme.scale(4) : super.pad();
     }
 
     @Override
