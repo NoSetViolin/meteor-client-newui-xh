@@ -31,7 +31,16 @@ public class WMeteorTextBox extends WTextBox implements MeteorWidget {
 
     @Override
     public double pad() {
-        return isModuleDetails() ? theme.scale(4) : super.pad();
+        return isModuleDetails() ? theme.scale(8) : super.pad();
+    }
+
+    @Override
+    protected void onCalculateSize() {
+        super.onCalculateSize();
+        if (isModuleDetails()) {
+            width = Math.max(width, theme.scale(72));
+            height = Math.max(height, theme.scale(34));
+        }
     }
 
     @Override

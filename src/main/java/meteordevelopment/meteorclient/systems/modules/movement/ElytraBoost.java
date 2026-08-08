@@ -30,6 +30,8 @@ import net.minecraft.world.item.component.Fireworks;
 import java.util.Set;
 
 public class ElytraBoost extends Module {
+    private static final float HAT_F_SHARP_12_PITCH = 1.0F;
+
     private final SettingGroup sgGeneral = settings.getDefaultGroup();
 
     private final Setting<Boolean> dontConsumeFirework = sgGeneral.add(new BoolSetting.Builder()
@@ -50,7 +52,7 @@ public class ElytraBoost extends Module {
 
     private final Setting<Boolean> playSound = sgGeneral.add(new BoolSetting.Builder()
         .name("play-sound")
-        .description("Plays the firework sound when a boost is triggered.")
+        .description("Plays a note block hat at F# (note 12) when a boost is triggered.")
         .defaultValue(true)
         .build()
     );
@@ -101,7 +103,7 @@ public class ElytraBoost extends Module {
             ((EntityAccessor) entity).meteor$setId(FakePlayerManager.getNextEntityId());
             fireworks.add(entity);
             if (playSound.get())
-                mc.level.playSound(mc.player, entity, SoundEvents.FIREWORK_ROCKET_LAUNCH, SoundSource.AMBIENT, 3.0F, 1.0F);
+                mc.level.playSound(mc.player, entity, SoundEvents.NOTE_BLOCK_HAT.value(), SoundSource.RECORDS, 3.0F, HAT_F_SHARP_12_PITCH);
             mc.level.addEntity(entity);
         }
     }

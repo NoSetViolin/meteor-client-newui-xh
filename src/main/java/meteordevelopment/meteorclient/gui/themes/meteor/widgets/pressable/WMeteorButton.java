@@ -20,7 +20,25 @@ public class WMeteorButton extends WButton implements MeteorWidget {
 
     @Override
     public double pad() {
-        return isModuleDetails() ? theme.scale(4) : super.pad();
+        return isModuleDetails() ? theme.scale(8) : super.pad();
+    }
+
+    @Override
+    protected void onCalculateSize() {
+        if (!isModuleDetails()) {
+            super.onCalculateSize();
+            return;
+        }
+
+        double textHeight = theme.textHeight(true);
+        height = Math.max(theme.scale(34), textHeight + theme.scale(14));
+
+        if (text != null) {
+            textWidth = theme.textWidth(text, text.length(), true);
+            width = textWidth + theme.scale(28);
+        } else {
+            width = height;
+        }
     }
 
     @Override
@@ -31,11 +49,14 @@ public class WMeteorButton extends WButton implements MeteorWidget {
         renderBackground(renderer, this, pressed, mouseOver);
 
         if (text != null) {
-            renderer.text(text, x + width / 2 - textWidth / 2, y + pad, theme.textColor.get(), false);
+            boolean material = isModuleDetails();
+            double textHeight = theme.textHeight(material);
+            renderer.text(text, x + width / 2 - textWidth / 2, y + height / 2 - textHeight / 2,
+                theme.textColor.get(), material);
         }
         else {
-            double ts = theme.textHeight();
-            renderer.quad(x + width / 2 - ts / 2, y + pad, ts, ts, texture, theme.textColor.get());
+            double ts = isModuleDetails() ? theme.textHeight(true) : theme.textHeight();
+            renderer.quad(x + width / 2 - ts / 2, y + height / 2 - ts / 2, ts, ts, texture, theme.textColor.get());
         }
     }
 }
