@@ -20,7 +20,28 @@ public class WMeteorDropdown<T> extends WDropdown<T> implements MeteorWidget {
 
     @Override
     public double pad() {
-        return isModuleDetails() ? theme.scale(4) : super.pad();
+        return isModuleDetails() ? theme.scale(8) : super.pad();
+    }
+
+    @Override
+    protected void onCalculateSize() {
+        if (!isModuleDetails()) {
+            super.onCalculateSize();
+            return;
+        }
+
+        double pad = pad();
+        maxValueWidth = 0;
+        for (T value : values) {
+            String text = value.toString();
+            maxValueWidth = Math.max(maxValueWidth, theme.textWidth(text, text.length(), true));
+        }
+
+        root.calculateSize();
+        double textHeight = theme.textHeight(true);
+        width = pad + maxValueWidth + pad + textHeight + pad;
+        height = Math.max(theme.scale(34), pad + textHeight + pad);
+        root.width = width;
     }
 
     @Override
@@ -37,15 +58,18 @@ public class WMeteorDropdown<T> extends WDropdown<T> implements MeteorWidget {
     protected void onRender(GuiRenderer renderer, double mouseX, double mouseY, double delta) {
         MeteorGuiTheme theme = theme();
         double pad = pad();
-        double s = theme.textHeight();
+        boolean material = isModuleDetails();
+        double s = theme.textHeight(material);
 
         renderBackground(renderer, this, pressed, mouseOver);
 
         String text = get().toString();
-        double w = theme.textWidth(text);
-        renderer.text(text, x + pad + maxValueWidth / 2 - w / 2, y + pad, theme.textColor.get(), false);
+        double w = theme.textWidth(text, text.length(), material);
+        renderer.text(text, x + pad + maxValueWidth / 2 - w / 2, y + height / 2 - s / 2,
+            theme.textColor.get(), material);
 
-        renderer.rotatedQuad(x + pad + maxValueWidth + pad, y + pad, s, s, 0, GuiRenderer.TRIANGLE, theme.textColor.get());
+        renderer.rotatedQuad(x + pad + maxValueWidth + pad, y + height / 2 - s / 2, s, s, 0,
+            GuiRenderer.TRIANGLE, theme.textColor.get());
     }
 
     private static class WRoot extends WDropdownRoot implements MeteorWidget {
@@ -60,9 +84,12 @@ public class WMeteorDropdown<T> extends WDropdown<T> implements MeteorWidget {
         @Override
         protected void onCalculateSize() {
             double pad = pad();
+            boolean material = isModuleDetails();
+            String text = value.toString();
 
-            width = pad + theme.textWidth(value.toString()) + pad;
-            height = pad + theme.textHeight() + pad;
+            width = pad + theme.textWidth(text, text.length(), material) + pad;
+            height = material ? Math.max(theme.scale(34), pad + theme.textHeight(true) + pad)
+                : pad + theme.textHeight() + pad;
         }
 
         @Override
@@ -79,7 +106,11 @@ public class WMeteorDropdown<T> extends WDropdown<T> implements MeteorWidget {
             color.a = preA;
 
             String text = value.toString();
-            renderer.text(text, x + width / 2 - theme.textWidth(text) / 2, y + pad(), theme.textColor.get(), false);
+            boolean material = isModuleDetails();
+            double textWidth = theme.textWidth(text, text.length(), material);
+            double textHeight = theme.textHeight(material);
+            renderer.text(text, x + width / 2 - textWidth / 2, y + height / 2 - textHeight / 2,
+                theme.textColor.get(), material);
         }
     }
 }

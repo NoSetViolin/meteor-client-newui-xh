@@ -124,6 +124,7 @@ public class ModuleScreen extends WidgetScreen {
         private WSmallButton favorite;
         private WSmallButton mode;
         private WActiveButton active;
+        private boolean twoColumns;
 
         private double plannedWidth;
         private double plannedHeight;
@@ -137,8 +138,8 @@ public class ModuleScreen extends WidgetScreen {
         @Override
         public void init() {
             back = add(new WBackButton()).widget();
-            favorite = add(new WSmallButton("Fav", () -> module.favorite = !module.favorite)).widget();
-            mode = add(new WSmallButton("Mode", this::toggleMode)).widget();
+            favorite = add(new WSmallButton("Favorite", () -> module.favorite = !module.favorite)).widget();
+            mode = add(new WSmallButton("Theme", this::toggleMode)).widget();
             active = add(new WActiveButton()).widget();
             view = add(theme.view()).widget();
             view.scrollOnlyWhenMouseOver = true;
@@ -159,64 +160,98 @@ public class ModuleScreen extends WidgetScreen {
             if (view == null) return;
             view.clear();
 
+            WWidget custom = module.getWidget(theme);
+            int contentWeight = moduleContentWeight(custom != null);
+            twoColumns = contentWeight > singleColumnCapacity();
+
             WHorizontalList columns = theme.horizontalList();
-            columns.spacing = 16;
+            columns.spacing = 18;
             WVerticalList left = theme.verticalList();
             WVerticalList right = theme.verticalList();
-            left.spacing = 12;
-            right.spacing = 12;
+            left.spacing = 14;
+            right.spacing = 14;
             columns.add(left).expandX();
-            columns.add(right).expandX();
+            if (twoColumns) columns.add(right).expandX();
 
             int leftWeight = 0;
             int rightWeight = 0;
             for (SettingGroup group : module.settings.groups) {
+                int visibleSettings = 0;
+                for (Setting<?> setting : group) {
+                    if (setting.isVisible()) visibleSettings++;
+                }
+                if (visibleSettings == 0) continue;
+
                 Settings singleGroup = new Settings();
                 singleGroup.groups.add(group);
-                int groupWeight = 1;
-                for (Setting<?> setting : group) {
-                    if (setting.isVisible()) groupWeight++;
-                }
+                int groupWeight = visibleSettings + 1;
 
-                boolean addLeft = leftWeight <= rightWeight;
+                boolean addLeft = !twoColumns || leftWeight <= rightWeight;
                 WVerticalList target = addLeft ? left : right;
                 target.add(theme.settings(singleGroup)).expandX();
                 if (addLeft) leftWeight += groupWeight;
                 else rightWeight += groupWeight;
             }
 
-            WSection moduleSection = theme.section("Module", true);
+            boolean moduleOnLeft = !twoColumns || leftWeight <= rightWeight;
+            WVerticalList moduleColumn = moduleOnLeft ? left : right;
+            WSection moduleSection = moduleColumn.add(theme.section("Module", true)).expandX().widget();
             WHorizontalList bind = moduleSection.add(theme.horizontalList()).expandX().widget();
-            bind.add(theme.label("Bind"));
+            bind.add(theme.label("Bind", true)).centerY();
             keybind = bind.add(theme.keybind(module.keybind)).expandX().widget();
             keybind.actionOnSet = () -> Modules.get().setModuleToBind(module);
             WButton reset = bind.add(theme.button(GuiRenderer.RESET)).widget();
             reset.action = keybind::resetBind;
 
             WHorizontalList release = moduleSection.add(theme.horizontalList()).expandX().widget();
-            release.add(theme.label("Toggle on release")).expandCellX();
+            release.add(theme.label("Toggle on release", true)).expandCellX().centerY();
             WCheckbox releaseToggle = release.add(theme.checkbox(module.toggleOnBindRelease)).widget();
             releaseToggle.action = () -> module.toggleOnBindRelease = releaseToggle.checked;
 
             WHorizontalList feedback = moduleSection.add(theme.horizontalList()).expandX().widget();
-            feedback.add(theme.label("Chat feedback")).expandCellX();
+            feedback.add(theme.label("Chat feedback", true)).expandCellX().centerY();
             WCheckbox feedbackToggle = feedback.add(theme.checkbox(module.chatFeedback)).widget();
             feedbackToggle.action = () -> module.chatFeedback = feedbackToggle.checked;
 
             WHorizontalList sharing = moduleSection.add(theme.horizontalList()).expandX().widget();
-            sharing.spacing = 6;
-            sharing.add(theme.label("Configuration")).expandCellX().centerY();
+            sharing.spacing = 8;
+            sharing.add(theme.label("Configuration", true)).expandCellX().centerY();
             WButton copy = sharing.add(theme.button("Copy")).widget();
             copy.action = ModuleScreen.this::toClipboard;
             WButton paste = sharing.add(theme.button("Paste")).widget();
             paste.action = ModuleScreen.this::fromClipboard;
-            right.add(moduleSection).expandX();
 
-            WWidget custom = module.getWidget(theme);
-            if (custom != null) left.add(custom).expandX();
+            if (moduleOnLeft) leftWeight += 5;
+            else rightWeight += 5;
+
+            if (custom != null) {
+                WVerticalList customColumn = !twoColumns || leftWeight <= rightWeight ? left : right;
+                customColumn.add(custom).expandX();
+            }
 
             view.add(columns).expandX();
             invalidate();
+        }
+
+        private int moduleContentWeight(boolean hasCustomWidget) {
+            int weight = 5; // Permanent Module card: header plus four rows.
+
+            for (SettingGroup group : module.settings.groups) {
+                int visibleSettings = 0;
+                for (Setting<?> setting : group) {
+                    if (setting.isVisible()) visibleSettings++;
+                }
+
+                if (visibleSettings > 0) weight += visibleSettings + 1;
+            }
+
+            if (hasCustomWidget) weight += 4;
+            return weight;
+        }
+
+        private int singleColumnCapacity() {
+            double availableHeight = getWindowHeight() * 0.52;
+            return Math.max(9, (int) Math.floor(availableHeight / theme.scale(42)));
         }
 
         private boolean visibilityChanged() {
@@ -230,12 +265,19 @@ public class ModuleScreen extends WidgetScreen {
 
         @Override
         public void calculateSize() {
-            double maxWidth = getWindowWidth() * 0.56;
-            double maxHeight = getWindowHeight() * 0.62;
-            plannedWidth = Math.min(maxWidth, maxHeight * 4.0 / 3.0);
-            plannedHeight = plannedWidth * 3.0 / 4.0;
-            if (view != null) view.maxHeight = plannedHeight - theme.scale(80);
+            double maxHeight = getWindowHeight() * 0.70;
+            double widthRatio = twoColumns ? 0.62 : 0.42;
+            double aspectLimit = maxHeight * (twoColumns ? 4.0 / 3.0 : 1.10);
+            plannedWidth = Math.min(getWindowWidth() * widthRatio, aspectLimit);
+            plannedHeight = maxHeight;
+
+            if (view != null) view.maxHeight = maxHeight - theme.scale(102);
             super.calculateSize();
+
+            if (view != null) {
+                double desiredHeight = view.height + theme.scale(102);
+                plannedHeight = Mth.clamp(desiredHeight, theme.scale(240), maxHeight);
+            }
         }
 
         @Override
@@ -256,18 +298,18 @@ public class ModuleScreen extends WidgetScreen {
             x = savedX;
             y = savedY;
 
-            double pad = theme.scale(15);
-            double top = y + theme.scale(16);
+            double pad = theme.scale(18);
+            double top = y + theme.scale(20);
             back.x = x + pad;
             back.y = top;
-            favorite.x = x + width - pad - theme.scale(42);
+            favorite.x = x + width - pad - favorite.width;
             favorite.y = top;
-            mode.x = favorite.x - theme.scale(50);
+            mode.x = favorite.x - theme.scale(8) - mode.width;
             mode.y = top;
-            active.x = mode.x - theme.scale(89);
+            active.x = mode.x - theme.scale(8) - active.width;
             active.y = top;
             view.x = x + pad;
-            view.y = y + theme.scale(66);
+            view.y = y + theme.scale(82);
             view.width = width - pad * 2;
         }
 
@@ -282,11 +324,11 @@ public class ModuleScreen extends WidgetScreen {
                 if (texture != null) renderRoundedTopBlur(renderer, texture, radius);
             }
 
-            renderRoundedTop(renderer, x, y, width, theme.scale(62), radius, header());
+            renderRoundedTop(renderer, x, y, width, theme.scale(76), radius, header());
 
-            renderer.text(module.title, x + theme.scale(80), y + theme.scale(15), text(), true);
-            String description = fit(module.description, width * 0.42);
-            renderer.text(description, x + theme.scale(80), y + theme.scale(41), muted(), false);
+            renderer.text(module.title, x + theme.scale(104), y + theme.scale(17), text(), true);
+            String description = fit(module.description, width * 0.34);
+            renderer.text(description, x + theme.scale(104), y + theme.scale(47), muted(), false);
         }
 
         private String fit(String value, double maxWidth) {
@@ -309,7 +351,7 @@ public class ModuleScreen extends WidgetScreen {
                 renderer.scissorEnd();
             }
 
-            renderer.scissorStart(x, y + radius, width, theme.scale(62) - radius);
+            renderer.scissorStart(x, y + radius, width, theme.scale(76) - radius);
             renderer.texture(0, 0, getWindowWidth(), getWindowHeight(), 0, texture);
             renderer.scissorEnd();
         }
@@ -325,7 +367,7 @@ public class ModuleScreen extends WidgetScreen {
         @Override
         public boolean onMouseClicked(MouseButtonEvent click, boolean doubled) {
             if (click.button() == GLFW_MOUSE_BUTTON_LEFT && click.x() >= x && click.x() <= x + width
-                && click.y() >= y && click.y() <= y + theme.scale(62)) {
+                && click.y() >= y && click.y() <= y + theme.scale(76)) {
                 dragging = true;
                 dragOffsetX = click.x() - x;
                 dragOffsetY = click.y() - y;
@@ -358,8 +400,8 @@ public class ModuleScreen extends WidgetScreen {
     private final class WBackButton extends WPressable {
         @Override
         protected void onCalculateSize() {
-            width = theme.scale(54);
-            height = theme.scale(28);
+            width = theme.scale(72);
+            height = theme.scale(36);
         }
 
         @Override
@@ -370,7 +412,9 @@ public class ModuleScreen extends WidgetScreen {
         @Override
         protected void onRender(GuiRenderer renderer, double mouseX, double mouseY, double delta) {
             renderControl(renderer, this, buttonColor());
-            renderer.text("< Back", x + theme.scale(8), y + height / 2 - theme.textHeight() / 2, text(), false);
+            String label = "< Back";
+            renderer.text(label, x + width / 2 - theme.textWidth(label, label.length(), true) / 2,
+                y + height / 2 - theme.textHeight(true) / 2, text(), true);
         }
     }
 
@@ -384,8 +428,8 @@ public class ModuleScreen extends WidgetScreen {
 
         @Override
         protected void onCalculateSize() {
-            width = theme.scale(42);
-            height = theme.scale(28);
+            width = Math.max(theme.scale(64), theme.textWidth(label, label.length(), true) + theme.scale(24));
+            height = theme.scale(36);
         }
 
         @Override
@@ -396,15 +440,16 @@ public class ModuleScreen extends WidgetScreen {
         @Override
         protected void onRender(GuiRenderer renderer, double mouseX, double mouseY, double delta) {
             renderControl(renderer, this, buttonColor());
-            renderer.text(label, x + width / 2 - theme.textWidth(label) / 2, y + height / 2 - theme.textHeight() / 2, text(), false);
+            renderer.text(label, x + width / 2 - theme.textWidth(label, label.length(), true) / 2,
+                y + height / 2 - theme.textHeight(true) / 2, text(), true);
         }
     }
 
     private final class WActiveButton extends WPressable {
         @Override
         protected void onCalculateSize() {
-            width = theme.scale(81);
-            height = theme.scale(28);
+            width = theme.scale(104);
+            height = theme.scale(36);
         }
 
         @Override
@@ -416,13 +461,13 @@ public class ModuleScreen extends WidgetScreen {
         protected void onRender(GuiRenderer renderer, double mouseX, double mouseY, double delta) {
             renderControl(renderer, this, module.isActive() ? ACCENT : buttonColor());
             String label = module.isActive() ? "Enabled" : "Disabled";
-            renderer.text(label, x + width / 2 - theme.textWidth(label) / 2, y + height / 2 - theme.textHeight() / 2,
-                module.isActive() ? Color.WHITE : text(), false);
+            renderer.text(label, x + width / 2 - theme.textWidth(label, label.length(), true) / 2,
+                y + height / 2 - theme.textHeight(true) / 2, module.isActive() ? Color.WHITE : text(), true);
         }
     }
 
     private void renderControl(GuiRenderer renderer, WWidget widget, Color color) {
-        double radius = theme.scale(7);
+        double radius = theme.scale(12);
         renderer.roundedQuad(widget.x, widget.y, widget.width, widget.height, radius, color);
     }
 }

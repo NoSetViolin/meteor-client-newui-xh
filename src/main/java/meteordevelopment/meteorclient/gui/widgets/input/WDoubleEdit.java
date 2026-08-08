@@ -41,12 +41,12 @@ public class WDoubleEdit extends WHorizontalList {
         spacing = 7;
 
         if (noSlider) {
-            textBox = add(theme.textBox(valueString(), this::filter)).minWidth(54).expandX().widget();
+            textBox = add(theme.textBox(valueString(), this::filter)).minWidth(72).expandX().widget();
             add(theme.button("+")).widget().action = () -> setButton(get() + 1);
             add(theme.button("-")).widget().action = () -> setButton(get() - 1);
         } else {
-            slider = add(theme.slider(value, sliderMin, sliderMax)).minWidth(small ? 92 : 122).centerY().expandX().widget();
-            textBox = add(theme.textBox(valueString(), this::filter)).minWidth(54).widget();
+            slider = add(theme.slider(value, sliderMin, sliderMax)).minWidth(small ? 108 : 136).centerY().expandX().widget();
+            textBox = add(theme.textBox(valueString(), this::filter)).minWidth(72).widget();
         }
 
         textBox.actionOnUnfocused = () -> {

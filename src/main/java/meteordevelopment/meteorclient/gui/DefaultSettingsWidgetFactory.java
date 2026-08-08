@@ -102,17 +102,18 @@ public class DefaultSettingsWidgetFactory extends SettingsWidgetFactory {
 
     // If a different theme uses has different heights of widgets this can method can be overwritten to account for it in the setting titles
     protected double settingTitleTopMargin() {
-        return mc.gui.screen() instanceof ModuleScreen ? 3 : 6;
+        return 6;
     }
 
     private void group(WVerticalList list, SettingGroup group, String filter, List<RemoveInfo> removeInfoList) {
-        WSection section = list.add(theme.section(group.name, group.sectionExpanded)).expandX().widget();
-        section.action = () -> group.sectionExpanded = section.isExpanded();
+        boolean material = mc.gui.screen() instanceof ModuleScreen;
+        WSection section = list.add(theme.section(group.name, material || group.sectionExpanded)).expandX().widget();
+        if (!material) section.action = () -> group.sectionExpanded = section.isExpanded();
 
         WTable table = section.add(theme.table()).expandX().widget();
-        if (mc.gui.screen() instanceof ModuleScreen) {
-            table.horizontalSpacing = 8;
-            table.verticalSpacing = 5;
+        if (material) {
+            table.horizontalSpacing = 12;
+            table.verticalSpacing = 8;
         }
 
         RemoveInfo removeInfo = null;
@@ -127,7 +128,10 @@ public class DefaultSettingsWidgetFactory extends SettingsWidgetFactory {
                 removeInfo.markRowForRemoval();
             }
 
-            table.add(theme.label(setting.title)).top().marginTop(settingTitleTopMargin()).widget().tooltip = setting.description;
+            Cell<WLabel> labelCell = table.add(theme.label(setting.title, material));
+            if (material) labelCell.centerY().padVertical(6);
+            else labelCell.top().marginTop(settingTitleTopMargin());
+            labelCell.widget().tooltip = setting.description;
 
             Factory factory = getFactory(setting.getClass());
             if (factory != null) factory.create(table, setting);

@@ -24,8 +24,8 @@ public class WMeteorSlider extends WSlider implements MeteorWidget {
 
     @Override
     protected void onCalculateSize() {
-        width = theme.scale(14);
-        height = theme.scale(14);
+        width = theme.scale(20);
+        height = theme.scale(20);
     }
 
     @Override
@@ -38,7 +38,7 @@ public class WMeteorSlider extends WSlider implements MeteorWidget {
     private void renderBar(GuiRenderer renderer, double valueWidth) {
         MeteorGuiTheme theme = theme();
 
-        double s = theme.scale(dragging || mouseOver ? 6 : 5);
+        double s = theme.scale(dragging || mouseOver ? 8 : 7);
         double x = this.x;
         double y = this.y + height / 2 - s / 2;
 
