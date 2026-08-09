@@ -38,7 +38,7 @@ public class WMeteorSlider extends WSlider implements MeteorWidget {
     private void renderBar(GuiRenderer renderer, double valueWidth) {
         MeteorGuiTheme theme = theme();
 
-        double s = theme.scale(dragging || mouseOver ? 8 : 7);
+        double s = theme.scale(dragging || mouseOver ? 7 : 6);
         double x = this.x;
         double y = this.y + height / 2 - s / 2;
 

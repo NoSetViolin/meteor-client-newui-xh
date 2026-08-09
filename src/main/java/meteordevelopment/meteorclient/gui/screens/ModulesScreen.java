@@ -41,6 +41,8 @@ import static meteordevelopment.meteorclient.utils.Utils.getWindowWidth;
 import static org.lwjgl.glfw.GLFW.*;
 
 public class ModulesScreen extends TabScreen {
+    private static String lastNavigationTitle = "Combat";
+
     private WModernPanel panel;
 
     public ModulesScreen(GuiTheme theme) {
@@ -106,6 +108,7 @@ public class ModulesScreen extends TabScreen {
         private final List<WCategoryButton> categoryButtons = new ArrayList<>();
 
         private NavigationItem selected;
+        private NavigationItem selectedBeforeSearch;
         private WTextBox search;
         private WModeToggle modeToggle;
         private WView moduleView;
@@ -120,6 +123,7 @@ public class ModulesScreen extends TabScreen {
         private double dragOffsetX;
         private double dragOffsetY;
         private boolean fallbackLightMode;
+        private boolean searchActive;
 
         @Override
         public void init() {
@@ -127,7 +131,7 @@ public class ModulesScreen extends TabScreen {
             buildNavigation();
 
             search = add(theme.textBox("", "Search modules...")).widget();
-            search.action = this::refreshModules;
+            search.action = this::onSearchChanged;
             modeToggle = add(new WModeToggle()).widget();
 
             for (NavigationItem item : navigation) {
@@ -161,7 +165,19 @@ public class ModulesScreen extends TabScreen {
             navigation.add(new NavigationItem("All Modules", null, false));
             navigation.add(new NavigationItem("Favorites", null, true));
 
-            selected = navigation.getFirst();
+            selected = findNavigation(lastNavigationTitle);
+            if (selected == null) {
+                selected = navigation.getFirst();
+                lastNavigationTitle = selected.title;
+            }
+        }
+
+        private NavigationItem findNavigation(String title) {
+            for (NavigationItem item : navigation) {
+                if (item.title.equalsIgnoreCase(title)) return item;
+            }
+
+            return null;
         }
 
         private boolean isVisible(Module module) {
@@ -193,9 +209,38 @@ public class ModulesScreen extends TabScreen {
         private Color selectedBackground() { return isLight() ? SELECTED_LIGHT : SELECTED_DARK; }
 
         private void select(NavigationItem item) {
+            if (searchActive && !isAllModules(item)) {
+                search.set("");
+                searchActive = false;
+                selectedBeforeSearch = null;
+            }
+
             if (selected == item) return;
             selected = item;
+            lastNavigationTitle = item.title;
             refreshModules();
+        }
+
+        private void onSearchChanged() {
+            boolean hasFilter = !search.get().trim().isEmpty();
+
+            if (hasFilter && !searchActive) {
+                searchActive = true;
+                selectedBeforeSearch = selected;
+
+                NavigationItem allModules = findNavigation("All Modules");
+                if (allModules != null) selected = allModules;
+            } else if (!hasFilter && searchActive) {
+                searchActive = false;
+                if (selectedBeforeSearch != null) selected = selectedBeforeSearch;
+                selectedBeforeSearch = null;
+            }
+
+            refreshModules();
+        }
+
+        private boolean isAllModules(NavigationItem item) {
+            return item.category == null && !item.favorite;
         }
 
         private void refreshModules() {
@@ -203,12 +248,13 @@ public class ModulesScreen extends TabScreen {
             moduleView.clear();
 
             String filter = search == null ? "" : search.get().trim().toLowerCase(Locale.ROOT);
+            boolean globalSearch = !filter.isEmpty();
             List<Module> modules = new ArrayList<>();
 
             for (Module module : Modules.get().getAll()) {
                 if (!isVisible(module)) continue;
-                if (selected.favorite && !module.favorite) continue;
-                if (selected.category != null && !selected.category.equals(module.category)) continue;
+                if (!globalSearch && selected.favorite && !module.favorite) continue;
+                if (!globalSearch && selected.category != null && !selected.category.equals(module.category)) continue;
                 if (!filter.isEmpty()
                     && !module.title.toLowerCase(Locale.ROOT).contains(filter)
                     && !module.description.toLowerCase(Locale.ROOT).contains(filter)) continue;
@@ -359,10 +405,11 @@ public class ModulesScreen extends TabScreen {
         private String moduleCountText() {
             int count = 0;
             String filter = search == null ? "" : search.get().trim().toLowerCase(Locale.ROOT);
+            boolean globalSearch = !filter.isEmpty();
             for (Module module : Modules.get().getAll()) {
                 if (!isVisible(module)) continue;
-                if (selected.favorite && !module.favorite) continue;
-                if (selected.category != null && !selected.category.equals(module.category)) continue;
+                if (!globalSearch && selected.favorite && !module.favorite) continue;
+                if (!globalSearch && selected.category != null && !selected.category.equals(module.category)) continue;
                 if (!filter.isEmpty()
                     && !module.title.toLowerCase(Locale.ROOT).contains(filter)
                     && !module.description.toLowerCase(Locale.ROOT).contains(filter)) continue;

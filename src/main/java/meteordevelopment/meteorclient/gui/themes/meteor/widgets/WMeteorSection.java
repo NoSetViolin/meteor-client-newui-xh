@@ -19,6 +19,8 @@ import static meteordevelopment.meteorclient.gui.themes.meteor.ModernWidgetStyle
 public class WMeteorSection extends WSection {
     private static final Color DARK_SURFACE = new Color(18, 20, 24, 244);
     private static final Color LIGHT_SURFACE = new Color(250, 251, 254, 248);
+    private static final Color DARK_OUTLINE = new Color(126, 140, 166, 42);
+    private static final Color LIGHT_OUTLINE = new Color(71, 79, 96, 34);
 
     public WMeteorSection(String title, boolean expanded, WWidget headerWidget) {
         super(title, expanded, headerWidget);
@@ -42,7 +44,12 @@ public class WMeteorSection extends WSection {
 
         MeteorGuiTheme meteorTheme = (MeteorGuiTheme) theme;
         Color surface = meteorTheme.modernLightMode.get() ? LIGHT_SURFACE : DARK_SURFACE;
-        renderer.roundedQuad(x, y, width, height, theme.scale(12), surface);
+        Color outline = meteorTheme.modernLightMode.get() ? LIGHT_OUTLINE : DARK_OUTLINE;
+        double border = theme.scale(1);
+        double radius = theme.scale(12);
+        renderer.roundedQuad(x, y, width, height, radius, outline);
+        renderer.roundedQuad(x + border, y + border, Math.max(0, width - border * 2),
+            Math.max(0, height - border * 2), Math.max(0, radius - border), surface);
     }
 
     protected class WMeteorHeader extends WHeader {

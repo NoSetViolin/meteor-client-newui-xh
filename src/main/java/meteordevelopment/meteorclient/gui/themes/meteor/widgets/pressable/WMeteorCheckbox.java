@@ -26,8 +26,8 @@ public class WMeteorCheckbox extends WCheckbox implements MeteorWidget {
     @Override
     protected void onCalculateSize() {
         if (isModuleDetails()) {
-            width = theme.scale(36);
-            height = theme.scale(20);
+            width = theme.scale(42);
+            height = theme.scale(24);
             return;
         }
 
@@ -43,7 +43,7 @@ public class WMeteorCheckbox extends WCheckbox implements MeteorWidget {
         animProgress = Mth.clamp(animProgress, 0, 1);
 
         if (isModuleDetails()) {
-            double knob = theme.scale(16);
+            double knob = theme.scale(18);
             double inset = (height - knob) / 2;
             renderPill(renderer, x, y, width, height, checked ? theme.checkboxColor.get() : theme.sliderRight.get());
             renderer.roundedQuad(x + inset + (width - knob - inset * 2) * animProgress, y + inset, knob, knob,

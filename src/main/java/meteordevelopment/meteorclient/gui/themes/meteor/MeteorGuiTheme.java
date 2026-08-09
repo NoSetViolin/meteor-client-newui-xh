@@ -186,6 +186,11 @@ public class MeteorGuiTheme extends GuiTheme {
     public void applyModernPalette() {
         boolean light = modernLightMode.get();
 
+        SettingColor modernAccent = new SettingColor(0, 245, 255);
+        accentColor.set(modernAccent);
+        checkboxColor.set(new SettingColor(0, 245, 255));
+        sliderLeft.set(new SettingColor(0, 245, 255));
+
         textColor.set(light ? new SettingColor(24, 27, 35) : new SettingColor(245, 247, 252));
         titleTextColor.set(light ? new SettingColor(18, 21, 29) : new SettingColor(255, 255, 255));
         textSecondaryColor.set(light ? new SettingColor(73, 79, 94) : new SettingColor(150, 158, 178));
