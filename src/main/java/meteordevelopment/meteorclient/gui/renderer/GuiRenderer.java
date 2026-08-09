@@ -241,6 +241,10 @@ public class GuiRenderer {
         quad(widget.x, widget.y, widget.width, widget.height, color);
     }
 
+    public void line(double x1, double y1, double x2, double y2, Color color) {
+        r.line(x1, y1, x2, y2, color);
+    }
+
     public void quad(double x, double y, double width, double height, GuiTexture texture, Color color) {
         rTex.texQuad(x, y, width, height, texture.get(width, height), color);
     }

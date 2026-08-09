@@ -16,6 +16,7 @@ import meteordevelopment.meteorclient.gui.widgets.WWidget;
 import meteordevelopment.meteorclient.gui.widgets.containers.WContainer;
 import meteordevelopment.meteorclient.gui.widgets.containers.WHorizontalList;
 import meteordevelopment.meteorclient.gui.widgets.containers.WSection;
+import meteordevelopment.meteorclient.gui.widgets.containers.WTable;
 import meteordevelopment.meteorclient.gui.widgets.containers.WVerticalList;
 import meteordevelopment.meteorclient.gui.widgets.containers.WView;
 import meteordevelopment.meteorclient.gui.widgets.pressable.WButton;
@@ -35,6 +36,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.util.Mth;
 
 import java.util.Optional;
+import java.util.function.Supplier;
 
 import static meteordevelopment.meteorclient.MeteorClient.mc;
 import static meteordevelopment.meteorclient.utils.Utils.getWindowHeight;
@@ -53,6 +55,8 @@ public class ModuleScreen extends WidgetScreen {
     private static final Color LIGHT_TEXT = new Color(28, 31, 42);
     private static final Color LIGHT_MUTED = new Color(92, 99, 119);
     private static final Color LIGHT_BUTTON = new Color(255, 255, 255, 255);
+    private static final Color DARK_ACCENT_SOFT = new Color(0, 245, 255, 42);
+    private static final Color LIGHT_ACCENT_SOFT = new Color(0, 155, 170, 30);
 
     private final Module module;
     private WModulePanel panel;
@@ -117,12 +121,17 @@ public class ModuleScreen extends WidgetScreen {
     private Color text() { return isLight() ? LIGHT_TEXT : DARK_TEXT; }
     private Color muted() { return isLight() ? LIGHT_MUTED : DARK_MUTED; }
     private Color buttonColor() { return isLight() ? LIGHT_BUTTON : DARK_BUTTON; }
+    private Color accentSoft() { return isLight() ? LIGHT_ACCENT_SOFT : DARK_ACCENT_SOFT; }
+
+    public double materialSettingLabelWidth() {
+        return panel != null && panel.twoColumns ? 128 : 170;
+    }
 
     private final class WModulePanel extends WContainer {
         private WView view;
         private WBackButton back;
-        private WSmallButton favorite;
-        private WSmallButton mode;
+        private WIconButton favorite;
+        private WIconButton mode;
         private WActiveButton active;
         private boolean twoColumns;
 
@@ -138,8 +147,10 @@ public class ModuleScreen extends WidgetScreen {
         @Override
         public void init() {
             back = add(new WBackButton()).widget();
-            favorite = add(new WSmallButton("Favorite", () -> module.favorite = !module.favorite)).widget();
-            mode = add(new WSmallButton("Theme", this::toggleMode)).widget();
+            favorite = add(new WIconButton(() -> module.favorite ? "★" : "☆", "Toggle favorite",
+                () -> module.favorite = !module.favorite, () -> module.favorite)).widget();
+            mode = add(new WIconButton(() -> isLight() ? "☀" : "☾", "Switch light and dark theme",
+                this::toggleMode, () -> false)).widget();
             active = add(new WActiveButton()).widget();
             view = add(theme.view()).widget();
             view.scrollOnlyWhenMouseOver = true;
@@ -196,30 +207,37 @@ public class ModuleScreen extends WidgetScreen {
             boolean moduleOnLeft = !twoColumns || leftWeight <= rightWeight;
             WVerticalList moduleColumn = moduleOnLeft ? left : right;
             WSection moduleSection = moduleColumn.add(theme.section("Module", true)).expandX().widget();
-            WHorizontalList bind = moduleSection.add(theme.horizontalList()).expandX().widget();
-            bind.add(theme.label("Bind", true)).centerY();
-            keybind = bind.add(theme.keybind(module.keybind)).expandX().widget();
+            WTable moduleTable = moduleSection.add(theme.table()).expandX().widget();
+            moduleTable.horizontalSpacing = 10;
+            moduleTable.verticalSpacing = 6;
+
+            moduleTable.add(theme.label("Bind", true)).minWidth(materialSettingLabelWidth()).centerY().padVertical(6);
+            keybind = moduleTable.add(theme.keybind(module.keybind)).expandX().widget();
             keybind.actionOnSet = () -> Modules.get().setModuleToBind(module);
-            WButton reset = bind.add(theme.button(GuiRenderer.RESET)).widget();
+            WButton reset = moduleTable.add(theme.button(GuiRenderer.RESET)).centerY().widget();
             reset.action = keybind::resetBind;
+            moduleTable.row();
 
-            WHorizontalList release = moduleSection.add(theme.horizontalList()).expandX().widget();
-            release.add(theme.label("Toggle on release", true)).expandCellX().centerY();
-            WCheckbox releaseToggle = release.add(theme.checkbox(module.toggleOnBindRelease)).widget();
+            moduleTable.add(theme.label("Toggle on release", true)).minWidth(materialSettingLabelWidth()).centerY().padVertical(6);
+            WCheckbox releaseToggle = moduleTable.add(theme.checkbox(module.toggleOnBindRelease)).expandCellX().right().widget();
             releaseToggle.action = () -> module.toggleOnBindRelease = releaseToggle.checked;
+            moduleTable.add(theme.label("")).minWidth(30);
+            moduleTable.row();
 
-            WHorizontalList feedback = moduleSection.add(theme.horizontalList()).expandX().widget();
-            feedback.add(theme.label("Chat feedback", true)).expandCellX().centerY();
-            WCheckbox feedbackToggle = feedback.add(theme.checkbox(module.chatFeedback)).widget();
+            moduleTable.add(theme.label("Chat feedback", true)).minWidth(materialSettingLabelWidth()).centerY().padVertical(6);
+            WCheckbox feedbackToggle = moduleTable.add(theme.checkbox(module.chatFeedback)).expandCellX().right().widget();
             feedbackToggle.action = () -> module.chatFeedback = feedbackToggle.checked;
+            moduleTable.add(theme.label("")).minWidth(30);
+            moduleTable.row();
 
-            WHorizontalList sharing = moduleSection.add(theme.horizontalList()).expandX().widget();
+            moduleTable.add(theme.label("Configuration", true)).minWidth(materialSettingLabelWidth()).centerY().padVertical(6);
+            WHorizontalList sharing = moduleTable.add(theme.horizontalList()).expandCellX().right().widget();
             sharing.spacing = 8;
-            sharing.add(theme.label("Configuration", true)).expandCellX().centerY();
             WButton copy = sharing.add(theme.button("Copy")).widget();
             copy.action = ModuleScreen.this::toClipboard;
             WButton paste = sharing.add(theme.button("Paste")).widget();
             paste.action = ModuleScreen.this::fromClipboard;
+            moduleTable.add(theme.label("")).minWidth(30);
 
             if (moduleOnLeft) leftWeight += 5;
             else rightWeight += 5;
@@ -276,7 +294,8 @@ public class ModuleScreen extends WidgetScreen {
 
             if (view != null) {
                 double desiredHeight = view.height + theme.scale(102);
-                plannedHeight = Mth.clamp(desiredHeight, theme.scale(240), maxHeight);
+                plannedHeight = Mth.clamp(desiredHeight, theme.scale(210), maxHeight);
+                height = plannedHeight;
             }
         }
 
@@ -327,7 +346,8 @@ public class ModuleScreen extends WidgetScreen {
             renderRoundedTop(renderer, x, y, width, theme.scale(76), radius, header());
 
             renderer.text(module.title, x + theme.scale(104), y + theme.scale(17), text(), true);
-            String description = fit(module.description, width * 0.34);
+            double descriptionWidth = Math.max(theme.scale(90), active.x - theme.scale(14) - (x + theme.scale(104)));
+            String description = fit(module.description, descriptionWidth);
             renderer.text(description, x + theme.scale(104), y + theme.scale(47), muted(), false);
         }
 
@@ -412,23 +432,29 @@ public class ModuleScreen extends WidgetScreen {
         @Override
         protected void onRender(GuiRenderer renderer, double mouseX, double mouseY, double delta) {
             renderControl(renderer, this, buttonColor());
-            String label = "< Back";
+            String label = "← Back";
             renderer.text(label, x + width / 2 - theme.textWidth(label, label.length(), true) / 2,
                 y + height / 2 - theme.textHeight(true) / 2, text(), true);
         }
     }
 
-    private final class WSmallButton extends WPressable {
-        private final String label;
+    private final class WIconButton extends WPressable {
+        private final Supplier<String> label;
+        private final String hint;
         private final Runnable action;
-        private WSmallButton(String label, Runnable action) {
+        private final Supplier<Boolean> highlighted;
+
+        private WIconButton(Supplier<String> label, String hint, Runnable action, Supplier<Boolean> highlighted) {
             this.label = label;
+            this.hint = hint;
             this.action = action;
+            this.highlighted = highlighted;
+            tooltip = hint;
         }
 
         @Override
         protected void onCalculateSize() {
-            width = Math.max(theme.scale(64), theme.textWidth(label, label.length(), true) + theme.scale(24));
+            width = theme.scale(40);
             height = theme.scale(36);
         }
 
@@ -439,8 +465,9 @@ public class ModuleScreen extends WidgetScreen {
 
         @Override
         protected void onRender(GuiRenderer renderer, double mouseX, double mouseY, double delta) {
-            renderControl(renderer, this, buttonColor());
-            renderer.text(label, x + width / 2 - theme.textWidth(label, label.length(), true) / 2,
+            renderControl(renderer, this, highlighted.get() ? accentSoft() : buttonColor());
+            String text = label.get();
+            renderer.text(text, x + width / 2 - theme.textWidth(text, text.length(), true) / 2,
                 y + height / 2 - theme.textHeight(true) / 2, text(), true);
         }
     }

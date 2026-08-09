@@ -112,8 +112,8 @@ public class DefaultSettingsWidgetFactory extends SettingsWidgetFactory {
 
         WTable table = section.add(theme.table()).expandX().widget();
         if (material) {
-            table.horizontalSpacing = 12;
-            table.verticalSpacing = 8;
+            table.horizontalSpacing = 10;
+            table.verticalSpacing = 6;
         }
 
         RemoveInfo removeInfo = null;
@@ -129,7 +129,11 @@ public class DefaultSettingsWidgetFactory extends SettingsWidgetFactory {
             }
 
             Cell<WLabel> labelCell = table.add(theme.label(setting.title, material));
-            if (material) labelCell.centerY().padVertical(6);
+            if (material) {
+                double labelWidth = mc.gui.screen() instanceof ModuleScreen moduleScreen
+                    ? moduleScreen.materialSettingLabelWidth() : 150;
+                labelCell.minWidth(labelWidth).centerY().padVertical(6);
+            }
             else labelCell.top().marginTop(settingTitleTopMargin());
             labelCell.widget().tooltip = setting.description;
 
@@ -168,7 +172,9 @@ public class DefaultSettingsWidgetFactory extends SettingsWidgetFactory {
     // Settings
 
     private void boolW(WTable table, BoolSetting setting) {
-        WCheckbox checkbox = table.add(theme.checkbox(setting.get())).expandCellX().widget();
+        Cell<WCheckbox> cell = table.add(theme.checkbox(setting.get())).expandCellX();
+        if (mc.gui.screen() instanceof ModuleScreen) cell.right();
+        WCheckbox checkbox = cell.widget();
         checkbox.action = () -> setting.set(checkbox.checked);
 
         reset(table, setting, () -> checkbox.checked = setting.get());
@@ -215,14 +221,18 @@ public class DefaultSettingsWidgetFactory extends SettingsWidgetFactory {
     }
 
     private <T extends Enum<?>> void enumW(WTable table, EnumSetting<T> setting) {
-        WDropdown<T> dropdown = table.add(theme.dropdown(setting.get())).expandCellX().widget();
+        Cell<WDropdown<T>> cell = table.add(theme.dropdown(setting.get())).expandCellX();
+        if (mc.gui.screen() instanceof ModuleScreen) cell.minWidth(150);
+        WDropdown<T> dropdown = cell.widget();
         dropdown.action = () -> setting.set(dropdown.get());
 
         reset(table, setting, () -> dropdown.set(setting.get()));
     }
 
     private void providedStringW(WTable table, ProvidedStringSetting setting) {
-        WDropdown<String> dropdown = table.add(theme.dropdown(setting.supplier.get(), setting.get())).expandCellX().widget();
+        Cell<WDropdown<String>> cell = table.add(theme.dropdown(setting.supplier.get(), setting.get())).expandCellX();
+        if (mc.gui.screen() instanceof ModuleScreen) cell.minWidth(150);
+        WDropdown<String> dropdown = cell.widget();
         dropdown.action = () -> setting.set(dropdown.get());
 
         reset(table, setting, () -> dropdown.set(setting.get()));

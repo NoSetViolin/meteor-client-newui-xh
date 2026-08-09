@@ -36,6 +36,8 @@ public class WMeteorButton extends WButton implements MeteorWidget {
         if (text != null) {
             textWidth = theme.textWidth(text, text.length(), true);
             width = textWidth + theme.scale(28);
+        } else if (isResetButton()) {
+            width = height = theme.scale(30);
         } else {
             width = height;
         }
@@ -44,7 +46,17 @@ public class WMeteorButton extends WButton implements MeteorWidget {
     @Override
     protected void onRender(GuiRenderer renderer, double mouseX, double mouseY, double delta) {
         MeteorGuiTheme theme = theme();
-        double pad = pad();
+
+        if (isResetButton()) {
+            if (mouseOver || pressed) {
+                renderer.roundedQuad(x, y, width, height, theme.scale(9), theme.backgroundColor.get(pressed, mouseOver));
+            }
+
+            double size = theme.scale(14);
+            renderer.quad(x + width / 2 - size / 2, y + height / 2 - size / 2, size, size, texture,
+                mouseOver ? theme.textColor.get() : theme.textSecondaryColor.get());
+            return;
+        }
 
         renderBackground(renderer, this, pressed, mouseOver);
 
@@ -58,5 +70,9 @@ public class WMeteorButton extends WButton implements MeteorWidget {
             double ts = isModuleDetails() ? theme.textHeight(true) : theme.textHeight();
             renderer.quad(x + width / 2 - ts / 2, y + height / 2 - ts / 2, ts, ts, texture, theme.textColor.get());
         }
+    }
+
+    private boolean isResetButton() {
+        return isModuleDetails() && texture == GuiRenderer.RESET;
     }
 }

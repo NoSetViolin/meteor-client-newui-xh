@@ -68,8 +68,18 @@ public class WMeteorDropdown<T> extends WDropdown<T> implements MeteorWidget {
         renderer.text(text, x + pad + maxValueWidth / 2 - w / 2, y + height / 2 - s / 2,
             theme.textColor.get(), material);
 
-        renderer.rotatedQuad(x + pad + maxValueWidth + pad, y + height / 2 - s / 2, s, s, 0,
-            GuiRenderer.TRIANGLE, theme.textColor.get());
+        if (material) {
+            double centerX = x + width - pad - theme.scale(5);
+            double centerY = y + height / 2;
+            double chevron = theme.scale(5);
+            renderer.line(centerX - chevron, centerY - chevron / 2, centerX, centerY + chevron / 2,
+                theme.textSecondaryColor.get());
+            renderer.line(centerX, centerY + chevron / 2, centerX + chevron, centerY - chevron / 2,
+                theme.textSecondaryColor.get());
+        } else {
+            renderer.rotatedQuad(x + pad + maxValueWidth + pad, y + height / 2 - s / 2, s, s, 0,
+                GuiRenderer.TRIANGLE, theme.textColor.get());
+        }
     }
 
     private static class WRoot extends WDropdownRoot implements MeteorWidget {
