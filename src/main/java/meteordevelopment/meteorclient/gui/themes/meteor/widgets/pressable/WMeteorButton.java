@@ -30,14 +30,14 @@ public class WMeteorButton extends WButton implements MeteorWidget {
             return;
         }
 
-        double textHeight = theme.textHeight(true);
-        height = Math.max(theme.scale(34), textHeight + theme.scale(14));
+        double textHeight = theme.textHeight();
+        height = Math.max(theme.scale(30), textHeight + theme.scale(10));
 
         if (text != null) {
-            textWidth = theme.textWidth(text, text.length(), true);
-            width = textWidth + theme.scale(28);
+            textWidth = theme.textWidth(text);
+            width = textWidth + theme.scale(20);
         } else if (isResetButton()) {
-            width = height = theme.scale(30);
+            width = height = theme.scale(26);
         } else {
             width = height;
         }
@@ -49,7 +49,7 @@ public class WMeteorButton extends WButton implements MeteorWidget {
 
         if (isResetButton()) {
             if (mouseOver || pressed) {
-                renderer.roundedQuad(x, y, width, height, theme.scale(9), theme.backgroundColor.get(pressed, mouseOver));
+                renderer.roundedQuad(x, y, width, height, theme.scale(4), theme.backgroundColor.get(pressed, mouseOver));
             }
 
             double size = theme.scale(14);
@@ -61,10 +61,9 @@ public class WMeteorButton extends WButton implements MeteorWidget {
         renderBackground(renderer, this, pressed, mouseOver);
 
         if (text != null) {
-            boolean material = isModuleDetails();
-            double textHeight = theme.textHeight(material);
+            double textHeight = theme.textHeight();
             renderer.text(text, x + width / 2 - textWidth / 2, y + height / 2 - textHeight / 2,
-                theme.textColor.get(), material);
+                theme.textColor.get(), false);
         }
         else {
             double ts = isModuleDetails() ? theme.textHeight(true) : theme.textHeight();

@@ -18,6 +18,8 @@ import meteordevelopment.meteorclient.utils.render.color.Color;
 import net.minecraft.util.Mth;
 
 import static meteordevelopment.meteorclient.gui.themes.meteor.ModernWidgetStyle.isModuleDetails;
+import static meteordevelopment.meteorclient.gui.themes.meteor.ModernWidgetStyle.isModernScreen;
+import meteordevelopment.meteorclient.gui.themes.meteor.NeverloseUi;
 
 public class WMeteorTextBox extends WTextBox implements MeteorWidget {
     private boolean cursorVisible;
@@ -31,7 +33,7 @@ public class WMeteorTextBox extends WTextBox implements MeteorWidget {
 
     @Override
     public double pad() {
-        return isModuleDetails() ? theme.scale(8) : super.pad();
+        return isModernScreen() ? theme.scale(6.5) : super.pad();
     }
 
     @Override
@@ -39,7 +41,7 @@ public class WMeteorTextBox extends WTextBox implements MeteorWidget {
         super.onCalculateSize();
         if (isModuleDetails()) {
             width = Math.max(width, theme.scale(72));
-            height = Math.max(height, theme.scale(34));
+            height = Math.max(height, theme.scale(30));
         }
     }
 
@@ -121,7 +123,9 @@ public class WMeteorTextBox extends WTextBox implements MeteorWidget {
             cursorTimer += delta * 1.75;
         }
 
-        renderBackground(renderer, this, false, false);
+        if (isModernScreen()) NeverloseUi.control(renderer, theme, x, y, width, height,
+            NeverloseUi.button(theme), focused || mouseOver);
+        else renderBackground(renderer, this, false, false);
 
         MeteorGuiTheme theme = theme();
         double pad = pad();

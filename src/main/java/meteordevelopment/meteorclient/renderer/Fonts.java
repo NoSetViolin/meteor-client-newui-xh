@@ -35,12 +35,38 @@ public class Fonts {
 
     public static final List<FontFamily> FONT_FAMILIES = new ArrayList<>();
     public static CustomTextRenderer RENDERER;
+    private static CustomTextRenderer uiRenderer;
+
+    /** A separate proportional face for menus; does not overwrite HUD font preferences. */
+    public static CustomTextRenderer uiRenderer() {
+        if (uiRenderer != null) return uiRenderer;
+        FontFace face = DEFAULT_FONT;
+        for (String name : new String[]{"Segoe UI", "Inter", "Noto Sans", "Arial", "Comfortaa"}) {
+            FontFamily family = getFamily(name);
+            if (family != null && family.get(FontInfo.Type.Regular) != null) {
+                face = family.get(FontInfo.Type.Regular);
+                break;
+            }
+        }
+        try {
+            uiRenderer = new CustomTextRenderer(face, findCjkFallback());
+            MeteorClient.LOG.info("Modern UI font: {}", face.info.family());
+        } catch (Exception e) {
+            MeteorClient.LOG.error("Failed to load modern UI font", e);
+            return RENDERER;
+        }
+        return uiRenderer;
+    }
 
     private Fonts() {
     }
 
     @PreInit
     public static void refresh() {
+        if (uiRenderer != null) {
+            uiRenderer.destroy();
+            uiRenderer = null;
+        }
         FONT_FAMILIES.clear();
 
         for (String builtinFont : BUILTIN_FONTS) {

@@ -128,7 +128,10 @@ public class DefaultSettingsWidgetFactory extends SettingsWidgetFactory {
                 removeInfo.markRowForRemoval();
             }
 
-            Cell<WLabel> labelCell = table.add(theme.label(setting.title, material));
+            // The rewritten module screen uses one regular text scale for every row.
+            // Bold/title metrics here made labels jump vertically and appear larger
+            // than dropdowns, switches and numeric values in the same grid.
+            Cell<WLabel> labelCell = table.add(theme.label(setting.title, false));
             if (material) {
                 double labelWidth = mc.gui.screen() instanceof ModuleScreen moduleScreen
                     ? moduleScreen.materialSettingLabelWidth() : 150;
@@ -222,7 +225,7 @@ public class DefaultSettingsWidgetFactory extends SettingsWidgetFactory {
 
     private <T extends Enum<?>> void enumW(WTable table, EnumSetting<T> setting) {
         Cell<WDropdown<T>> cell = table.add(theme.dropdown(setting.get())).expandCellX();
-        if (mc.gui.screen() instanceof ModuleScreen) cell.minWidth(150);
+        if (mc.gui.screen() instanceof ModuleScreen) cell.minWidth(80);
         WDropdown<T> dropdown = cell.widget();
         dropdown.action = () -> setting.set(dropdown.get());
 
@@ -231,7 +234,7 @@ public class DefaultSettingsWidgetFactory extends SettingsWidgetFactory {
 
     private void providedStringW(WTable table, ProvidedStringSetting setting) {
         Cell<WDropdown<String>> cell = table.add(theme.dropdown(setting.supplier.get(), setting.get())).expandCellX();
-        if (mc.gui.screen() instanceof ModuleScreen) cell.minWidth(150);
+        if (mc.gui.screen() instanceof ModuleScreen) cell.minWidth(80);
         WDropdown<String> dropdown = cell.widget();
         dropdown.action = () -> setting.set(dropdown.get());
 

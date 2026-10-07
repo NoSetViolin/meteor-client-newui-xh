@@ -65,6 +65,10 @@ public abstract class WidgetScreen extends Screen {
 
     protected boolean firstInit = true;
 
+    public GuiTheme getTheme() {
+        return theme;
+    }
+
     public WidgetScreen(GuiTheme theme, String title) {
         super(Component.literal(title));
 

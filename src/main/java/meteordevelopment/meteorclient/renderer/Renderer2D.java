@@ -36,6 +36,7 @@ public class Renderer2D {
 
     public void setAlpha(double alpha) {
         triangles.alpha = alpha;
+        lines.alpha = alpha;
     }
 
     public void begin() {
