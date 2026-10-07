@@ -7,6 +7,7 @@ package meteordevelopment.meteorclient.gui.renderer;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.FilterMode;
+import com.mojang.blaze3d.textures.GpuSampler;
 import com.mojang.blaze3d.textures.GpuTextureView;
 import it.unimi.dsi.fastutil.Stack;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -50,6 +51,14 @@ public class GuiRenderer {
 
     private final Renderer2D r = new Renderer2D(false);
     private final Renderer2D rTex = new Renderer2D(true);
+    private final UiShapeRenderer shapes = new UiShapeRenderer();
+    private enum Batch { Color, Line, Texture, Shape, Glass, Text }
+    private Batch batch;
+    private GpuTextureView batchTexture;
+    private GpuSampler batchSampler;
+    private boolean building;
+    private double alpha = 1;
+    private double textSize = 1;
 
     private final Pool<Scissor> scissorPool = new Pool<>(Scissor::new);
     private final Stack<Scissor> scissorStack = new ObjectArrayList<>();
@@ -108,6 +117,25 @@ public class GuiRenderer {
     public void beginRender() {
         r.begin();
         rTex.begin();
+        shapes.begin();
+        batch = null;
+        batchTexture = null;
+        batchSampler = null;
+        building = true;
+    }
+
+    private void selectBatch(Batch next) {
+        selectBatch(next, null, null);
+    }
+
+    private void selectBatch(Batch next, GpuTextureView texture, GpuSampler sampler) {
+        if (batch != null && (batch != next || batchTexture != texture || batchSampler != sampler)) {
+            endRender(scissorStack.top());
+            beginRender();
+        }
+        batch = next;
+        batchTexture = texture;
+        batchSampler = sampler;
     }
 
     public void endRender() {
@@ -119,25 +147,21 @@ public class GuiRenderer {
 
         r.end();
         rTex.end();
+        shapes.end();
+        building = false;
 
         r.render();
-        rTex.render("u_Texture", TEXTURE.getTextureView(), TEXTURE.getSampler());
+        boolean externalTexture = batch == Batch.Texture && batchTexture != null;
+        rTex.render("u_Texture", externalTexture ? batchTexture : TEXTURE.getTextureView(),
+            externalTexture ? batchSampler : TEXTURE.getSampler());
+        shapes.render(batch == Batch.Glass ? batchTexture : null);
 
-        // Normal text
-        theme.textRenderer().begin(graphics, theme.scale(1));
-        for (TextOperation text : texts) {
-            if (!text.title) text.run(textPool);
+        if (!texts.isEmpty()) {
+            theme.textRenderer().begin(graphics, theme.scale(theme.textScale() * textSize));
+            for (TextOperation text : texts) text.run(textPool);
+            theme.textRenderer().end();
+            texts.clear();
         }
-        theme.textRenderer().end();
-
-        // Title text
-        theme.textRenderer().begin(graphics, theme.scale(1.25));
-        for (TextOperation text : texts) {
-            if (text.title) text.run(textPool);
-        }
-        theme.textRenderer().end();
-
-        texts.clear();
 
         if (scissor != null) scissor.pop();
     }
@@ -145,18 +169,19 @@ public class GuiRenderer {
     public void scissorStart(double x, double y, double width, double height) {
         if (!scissorStack.isEmpty()) {
             Scissor parent = scissorStack.top();
-
-            if (x < parent.x) x = parent.x;
-            else if (x + width > parent.x + parent.width) width -= (x + width) - (parent.x + parent.width);
-
-            if (y < parent.y) y = parent.y;
-            else if (y + height > parent.y + parent.height) height -= (y + height) - (parent.y + parent.height);
+            double right = Math.min(x + Math.max(0, width), parent.x + parent.width);
+            double bottom = Math.min(y + Math.max(0, height), parent.y + parent.height);
+            x = Math.max(x, parent.x);
+            y = Math.max(y, parent.y);
+            width = Math.max(0, right - x);
+            height = Math.max(0, bottom - y);
 
             endRender(parent);
         }
 
-        scissorStack.push(scissorPool.get().set(x, y, width, height));
-        graphics.enableScissor((int) x, (int) y, (int) (x + width), (int) (y + height));
+        Scissor current = scissorPool.get().set(x, y, width, height);
+        scissorStack.push(current);
+        graphics.enableScissor(current.x, current.y, current.x + current.width, current.y + current.height);
 
         beginRender();
     }
@@ -215,8 +240,16 @@ public class GuiRenderer {
     }
 
     public void setAlpha(double a) {
+        a = Double.isFinite(a) ? Mth.clamp(a, 0, 1) : 1;
+        // Pending text must use the alpha of the batch that queued it.
+        if (building && a != alpha) {
+            endRender(scissorStack.top());
+            beginRender();
+        }
+        alpha = a;
         r.setAlpha(a);
         rTex.setAlpha(a);
+        shapes.setAlpha(a);
 
         theme.textRenderer().setAlpha(a);
     }
@@ -226,6 +259,8 @@ public class GuiRenderer {
     }
 
     public void quad(double x, double y, double width, double height, Color cTopLeft, Color cTopRight, Color cBottomRight, Color cBottomLeft) {
+        if (width <= 0 || height <= 0) return;
+        selectBatch(Batch.Color);
         r.quad(x, y, width, height, cTopLeft, cTopRight, cBottomRight, cBottomLeft);
     }
 
@@ -242,129 +277,89 @@ public class GuiRenderer {
     }
 
     public void line(double x1, double y1, double x2, double y2, Color color) {
+        selectBatch(Batch.Line);
         r.line(x1, y1, x2, y2, color);
     }
 
     public void quad(double x, double y, double width, double height, GuiTexture texture, Color color) {
+        selectBatch(Batch.Texture);
         rTex.texQuad(x, y, width, height, texture.get(width, height), color);
     }
 
-    /**
-     * Draws an anti-aliased rounded rectangle using non-overlapping body quads and
-     * quarter-circle texture samples. Unlike the old horizontal-band approximation,
-     * the edge quality does not depend on a small fixed segment count.
-     */
+    /** Analytic, anti-aliased rounded rectangle; independent of the icon atlas. */
     public void roundedQuad(double x, double y, double width, double height, double radius, Color color) {
-        radius = clampRadius(radius, width, height, true, true);
-        if (radius <= 0) {
-            quad(x, y, width, height, color);
-            return;
-        }
-
-        quad(x + radius, y, width - radius * 2, height, color);
-        quad(x, y + radius, radius, height - radius * 2, color);
-        quad(x + width - radius, y + radius, radius, height - radius * 2, color);
-
-        circleQuarter(x, y, radius, Corner.TopLeft, color);
-        circleQuarter(x + width - radius, y, radius, Corner.TopRight, color);
-        circleQuarter(x + width - radius, y + height - radius, radius, Corner.BottomRight, color);
-        circleQuarter(x, y + height - radius, radius, Corner.BottomLeft, color);
+        roundedGradient(x, y, width, height, radius, color, color);
     }
 
     /** Draws a rectangle with only its top two corners rounded. */
     public void roundedTopQuad(double x, double y, double width, double height, double radius, Color color) {
-        radius = clampRadius(radius, width, height, true, false);
-        if (radius <= 0) {
-            quad(x, y, width, height, color);
-            return;
-        }
-
-        quad(x, y + radius, width, height - radius, color);
-        quad(x + radius, y, width - radius * 2, radius, color);
-        circleQuarter(x, y, radius, Corner.TopLeft, color);
-        circleQuarter(x + width - radius, y, radius, Corner.TopRight, color);
+        selectBatch(Batch.Shape);
+        shapes.rectangle(x, y, width, height, radius, radius, 0, 0, 0, 1, color, color);
     }
 
     /** Draws a rectangle with only its left two corners rounded. */
     public void roundedLeftQuad(double x, double y, double width, double height, double radius, Color color) {
-        radius = clampRadius(radius, width, height, false, true);
-        if (radius <= 0) {
-            quad(x, y, width, height, color);
-            return;
-        }
-
-        quad(x + radius, y, width - radius, height, color);
-        quad(x, y + radius, radius, height - radius * 2, color);
-        circleQuarter(x, y, radius, Corner.TopLeft, color);
-        circleQuarter(x, y + height - radius, radius, Corner.BottomLeft, color);
+        selectBatch(Batch.Shape);
+        shapes.rectangle(x, y, width, height, radius, 0, 0, radius, 0, 1, color, color);
     }
 
-    private double clampRadius(double radius, double width, double height, boolean bothX, boolean bothY) {
-        if (width <= 0 || height <= 0) return 0;
-        double maxX = bothX ? width / 2 : width;
-        double maxY = bothY ? height / 2 : height;
-        return Math.max(0, Math.min(radius, Math.min(maxX, maxY)));
+    public void roundedGradient(double x, double y, double width, double height, double radius, Color top, Color bottom) {
+        selectBatch(Batch.Shape);
+        shapes.rectangle(x, y, width, height, radius, radius, radius, radius, 0, 1, top, bottom);
     }
 
-    private void circleQuarter(double x, double y, double radius, Corner corner, Color color) {
-        var region = CIRCLE.get(radius * 2 * mc.getWindow().getGuiScale(), radius * 2 * mc.getWindow().getGuiScale());
-        double midX = (region.x1 + region.x2) / 2;
-        double midY = (region.y1 + region.y2) / 2;
-
-        double u1 = corner.left ? region.x1 : midX;
-        double u2 = corner.left ? midX : region.x2;
-        double v1 = corner.top ? region.y1 : midY;
-        double v2 = corner.top ? midY : region.y2;
-        rTex.texQuad(x, y, radius, radius, 0, u1, v1, u2, v2, color);
+    public void roundedOutline(double x, double y, double width, double height, double radius, double thickness, Color color) {
+        if (thickness <= 0) return;
+        selectBatch(Batch.Shape);
+        shapes.rectangle(x, y, width, height, radius, radius, radius, radius, thickness, 1, color, color);
     }
 
-    private enum Corner {
-        TopLeft(true, true),
-        TopRight(false, true),
-        BottomRight(false, false),
-        BottomLeft(true, false);
+    public void roundedShadow(double x, double y, double width, double height, double radius, double softness, Color color) {
+        selectBatch(Batch.Shape);
+        shapes.rectangle(x, y, width, height, radius, radius, radius, radius, -1, softness, color, color);
+    }
 
-        private final boolean left;
-        private final boolean top;
-
-        Corner(boolean left, boolean top) {
-            this.left = left;
-            this.top = top;
-        }
+    /** Samples a full-window backdrop through a rounded mask in one draw. */
+    public void roundedBackdrop(double x, double y, double width, double height, double radius, GpuTextureView texture, Color tint) {
+        if (texture == null) return;
+        selectBatch(Batch.Glass, texture, null);
+        shapes.rectangle(x, y, width, height, radius, radius, radius, radius, 0, 1, tint, tint);
     }
 
     public void rotatedQuad(double x, double y, double width, double height, double rotation, GuiTexture texture, Color color) {
+        selectBatch(Batch.Texture);
         rTex.texQuad(x, y, width, height, rotation, texture.get(width, height), color);
     }
 
     public void triangle(double x1, double y1, double x2, double y2, double x3, double y3, Color color) {
+        selectBatch(Batch.Color);
         r.triangle(x1, y1, x2, y2, x3, y3, color);
     }
 
     public void text(String text, double x, double y, Color color, boolean title) {
-        texts.add(getOp(textPool, x, y, color).set(text, theme.textRenderer(), title));
+        textScaled(text, x, y, color, title ? 1.25 : 1);
+    }
+
+    public void textScaled(String text, double x, double y, Color color, double size) {
+        if (size <= 0 || !Double.isFinite(size)) return;
+        if (batch == Batch.Text && textSize != size) {
+            endRender(scissorStack.top());
+            beginRender();
+        }
+        selectBatch(Batch.Text);
+        textSize = size;
+        texts.add(getOp(textPool, x, y, color).set(text, theme.textRenderer(), false));
     }
 
     public void texture(double x, double y, double width, double height, double rotation, Texture texture) {
-        post(() -> {
-            rTex.begin();
-            rTex.texQuad(x, y, width, height, rotation, 0, 0, 1, 1, WHITE);
-            rTex.end();
-
-            rTex.render(texture.getTextureView(), texture.getSampler());
-        });
+        selectBatch(Batch.Texture, texture.getTextureView(), texture.getSampler());
+        rTex.texQuad(x, y, width, height, rotation, 0, 0, 1, 1, WHITE);
     }
 
     public void texture(double x, double y, double width, double height, double rotation, GpuTextureView texture) {
-        post(() -> {
-            rTex.begin();
-            // Framebuffer textures use the opposite vertical origin from GUI
-            // assets, so flip V to keep sampled world content upright.
-            rTex.texQuad(x, y, width, height, rotation, 0, 1, 1, 0, WHITE);
-            rTex.end();
-
-            rTex.render(texture, RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR));
-        });
+        selectBatch(Batch.Texture, texture, RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR));
+        // Framebuffer textures use the opposite vertical origin from GUI assets.
+        rTex.texQuad(x, y, width, height, rotation, 0, 1, 1, 0, WHITE);
     }
 
     public void post(Runnable task) {

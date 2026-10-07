@@ -123,6 +123,22 @@ public abstract class MeteorRenderPipelines {
         .build()
     );
 
+    public static final RenderPipeline UI_SHAPE = uiShape(false);
+    public static final RenderPipeline UI_GLASS = uiShape(true);
+
+    private static RenderPipeline uiShape(boolean glass) {
+        RenderPipeline.Builder builder = new ExtendedRenderPipelineBuilder(MESH_UNIFORMS)
+            .withLocation(MeteorClient.identifier(glass ? "pipeline/ui_glass" : "pipeline/ui_shape"))
+            .withVertexBinding(0, MeteorVertexFormats.UI_SHAPE).withPrimitiveTopology(PrimitiveTopology.TRIANGLES)
+            .withVertexShader(MeteorClient.identifier("shaders/ui_shape.vert"))
+            .withFragmentShader(MeteorClient.identifier(glass ? "shaders/ui_glass.frag" : "shaders/ui_shape.frag"))
+            .withDepthStencilState(new DepthStencilState(CompareOp.ALWAYS_PASS, false))
+            .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
+            .withCull(false);
+        if (glass) builder.withBindGroupLayout(BindGroupLayout.builder().withSampler("u_Texture").build());
+        return add(builder.build());
+    }
+
     public static final RenderPipeline UI_TEXT = add(new ExtendedRenderPipelineBuilder(MESH_UNIFORMS)
         .withLocation(MeteorClient.identifier("pipeline/ui_text"))
         .withVertexBinding(0, MeteorVertexFormats.POS2_TEXTURE_COLOR).withPrimitiveTopology(PrimitiveTopology.TRIANGLES)

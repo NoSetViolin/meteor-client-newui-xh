@@ -11,9 +11,15 @@ import meteordevelopment.meteorclient.gui.widgets.containers.WView;
 
 public class WMeteorView extends WView implements MeteorWidget {
     @Override
+    protected double handleWidth() {
+        return meteordevelopment.meteorclient.gui.themes.meteor.ModernWidgetStyle.isModernScreen()
+            ? theme.scale(3) : super.handleWidth();
+    }
+    @Override
     protected void onRender(GuiRenderer renderer, double mouseX, double mouseY, double delta) {
         if (canScroll && hasScrollBar) {
-            renderer.quad(handleX(), handleY(), handleWidth(), handleHeight(), theme().scrollbarColor.get(focused, handleMouseOver));
+            renderer.roundedQuad(handleX(), handleY(), handleWidth(), handleHeight(), handleWidth() / 2,
+                theme().scrollbarColor.get(focused, handleMouseOver));
         }
     }
 }

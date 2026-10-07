@@ -30,5 +30,17 @@ public abstract class MeteorVertexFormats {
         .addAttribute("Color", GpuFormat.RGBA8_UNORM)   // 4 bytes (RGBA, 0-255)
         .build();
 
+    // Analytic UI primitives: all shape data is carried by vertices so consecutive
+    // shapes can share a draw call without allocating a uniform buffer per widget.
+    public static final VertexFormat UI_SHAPE = VertexFormat.builder(STEP_RATE)
+        .addAttribute("Position", GpuFormat.RG32_FLOAT)
+        .addAttribute("Local", GpuFormat.RG32_FLOAT)
+        .addAttribute("Size", GpuFormat.RG32_FLOAT)
+        .addAttribute("Radii", GpuFormat.RGBA32_FLOAT)
+        .addAttribute("Parameters", GpuFormat.RG32_FLOAT)
+        .addAttribute("ColorTop", GpuFormat.RGBA8_UNORM)
+        .addAttribute("ColorBottom", GpuFormat.RGBA8_UNORM)
+        .build();
+
     private MeteorVertexFormats() {}
 }

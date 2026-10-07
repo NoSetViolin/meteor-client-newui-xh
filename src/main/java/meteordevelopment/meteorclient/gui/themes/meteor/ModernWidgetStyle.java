@@ -7,6 +7,7 @@ package meteordevelopment.meteorclient.gui.themes.meteor;
 
 import meteordevelopment.meteorclient.gui.renderer.GuiRenderer;
 import meteordevelopment.meteorclient.gui.screens.ModuleScreen;
+import meteordevelopment.meteorclient.gui.screens.ModulesScreen;
 import meteordevelopment.meteorclient.utils.render.color.Color;
 
 import static meteordevelopment.meteorclient.MeteorClient.mc;
@@ -17,6 +18,10 @@ public final class ModernWidgetStyle {
 
     public static boolean isModuleDetails() {
         return mc.gui.screen() instanceof ModuleScreen;
+    }
+
+    public static boolean isModernScreen() {
+        return isModuleDetails() || mc.gui.screen() instanceof ModulesScreen;
     }
 
     public static void renderPill(GuiRenderer renderer, double x, double y, double width, double height, Color color) {

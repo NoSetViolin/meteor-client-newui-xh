@@ -18,6 +18,7 @@ import meteordevelopment.meteorclient.MeteorClient;
 import meteordevelopment.meteorclient.events.game.ResolutionChangedEvent;
 import meteordevelopment.meteorclient.events.render.RenderAfterWorldEvent;
 import meteordevelopment.meteorclient.gui.WidgetScreen;
+import meteordevelopment.meteorclient.gui.themes.meteor.MeteorGuiTheme;
 import meteordevelopment.meteorclient.gui.screens.ModuleScreen;
 import meteordevelopment.meteorclient.gui.screens.ModulesScreen;
 import meteordevelopment.meteorclient.renderer.FixedUniformStorage;
@@ -135,7 +136,9 @@ public class Blur extends Module {
             // Resize all fbos
             for (int i = 0; i < fbos.length; i++) {
                 if (fbos[i] != null) {
+                    var texture = fbos[i].texture();
                     fbos[i].close();
+                    texture.close();
                 }
 
                 fbos[i] = createFbo(i);
@@ -151,8 +154,8 @@ public class Blur extends Module {
     private GpuTextureView createFbo(int i) {
         double scale = 1 / Math.pow(2, i);
 
-        int width = (int) (mc.getWindow().getWidth() * scale);
-        int height = (int) (mc.getWindow().getHeight() * scale);
+        int width = Math.max(1, (int) (mc.getWindow().getWidth() * scale));
+        int height = Math.max(1, (int) (mc.getWindow().getHeight() * scale));
 
         return RenderSystem.getDevice().createTextureView(RenderSystem.getDevice().createTexture("Blur - " + i, 15, GpuFormat.RGBA8_UNORM, width, height, 1, 1));
     }
@@ -191,7 +194,13 @@ public class Blur extends Module {
         }
 
         // Update strength
-        IntFloatImmutablePair strength = strengths[(int) ((this.strength.get() - 1) * progress)];
+        int level = this.strength.get();
+        if (mc.gui.screen() instanceof WidgetScreen screen
+            && (screen instanceof ModulesScreen || screen instanceof ModuleScreen)
+            && screen.getTheme() instanceof MeteorGuiTheme theme) {
+            level = theme.uiEffects.get() == MeteorGuiTheme.UiEffects.High ? 10 : 5;
+        }
+        IntFloatImmutablePair strength = strengths[(int) ((level - 1) * progress)];
         int iterations = strength.leftInt();
         float offset = strength.rightFloat();
 
@@ -214,8 +223,7 @@ public class Blur extends Module {
             renderToFbo(fbos[i - 1], fbos[i], MeteorRenderPipelines.BLUR_UP, ubos[i - 1]);
         }
 
-        // ModulesScreen samples this texture inside its own rounded Mica
-        // surface. Keep the rest of the game framebuffer sharp.
+        // Modern screens sample the backdrop through the analytic glass mask.
         if (mc.gui.screen() instanceof ModulesScreen || mc.gui.screen() instanceof ModuleScreen) return;
         if (!isActive()) return;
 
@@ -241,10 +249,12 @@ public class Blur extends Module {
     private boolean shouldRender() {
         Screen screen = mc.gui.screen();
 
-        // The modern module browser is designed around a frosted-glass surface,
-        // so it always uses Meteor's existing blur pipeline without changing the
-        // user's Blur module state or its behavior on other screens.
-        if (screen instanceof ModulesScreen || screen instanceof ModuleScreen) return true;
+        // The UI quality setting controls modern glass independently of the
+        // Blur module toggle; other screens retain the module's preferences.
+        if (screen instanceof ModulesScreen || screen instanceof ModuleScreen) {
+            return !(((WidgetScreen) screen).getTheme() instanceof MeteorGuiTheme theme)
+                || theme.uiEffects.get() != MeteorGuiTheme.UiEffects.Off;
+        }
         if (!isActive()) return false;
 
         if (screen instanceof WidgetScreen) return meteor.get();
@@ -256,7 +266,7 @@ public class Blur extends Module {
     }
 
     public GpuTextureView getGuiBlurTexture() {
-        return enabled ? fbos[0] : null;
+        return enabled && mc.level != null ? fbos[0] : null;
     }
 
     // Uniforms

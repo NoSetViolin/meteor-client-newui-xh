@@ -8,6 +8,7 @@ package meteordevelopment.meteorclient.gui.themes.meteor.widgets;
 import meteordevelopment.meteorclient.gui.renderer.GuiRenderer;
 import meteordevelopment.meteorclient.gui.themes.meteor.MeteorGuiTheme;
 import meteordevelopment.meteorclient.gui.themes.meteor.MeteorWidget;
+import meteordevelopment.meteorclient.gui.themes.meteor.NeverloseUi;
 import meteordevelopment.meteorclient.gui.utils.Cell;
 import meteordevelopment.meteorclient.gui.widgets.WWidget;
 import meteordevelopment.meteorclient.gui.widgets.containers.WSection;
@@ -42,14 +43,8 @@ public class WMeteorSection extends WSection {
     protected void onRender(GuiRenderer renderer, double mouseX, double mouseY, double delta) {
         if (!isModuleDetails()) return;
 
-        MeteorGuiTheme meteorTheme = (MeteorGuiTheme) theme;
-        Color surface = meteorTheme.modernLightMode.get() ? LIGHT_SURFACE : DARK_SURFACE;
-        Color outline = meteorTheme.modernLightMode.get() ? LIGHT_OUTLINE : DARK_OUTLINE;
-        double border = theme.scale(1);
-        double radius = theme.scale(12);
-        renderer.roundedQuad(x, y, width, height, radius, outline);
-        renderer.roundedQuad(x + border, y + border, Math.max(0, width - border * 2),
-            Math.max(0, height - border * 2), Math.max(0, radius - border), surface);
+        double titleSpace = theme.scale(20);
+        NeverloseUi.group(renderer, theme, x, y + titleSpace, width, Math.max(0, height - titleSpace));
     }
 
     protected class WMeteorHeader extends WHeader {
@@ -62,10 +57,8 @@ public class WMeteorSection extends WSection {
         @Override
         public void init() {
             if (isModuleDetails()) {
-                add(theme.label(title, true).color(((MeteorGuiTheme) theme).accentColor.get()))
-                    .padLeft(12).padTop(10).padBottom(8);
-                add(theme.horizontalSeparator()).expandX().centerY().padRight(12);
-                if (headerWidget != null) add(headerWidget).padRight(12);
+                add(theme.label(title.toUpperCase(), false).color(NeverloseUi.muted(theme))).padLeft(10);
+                if (headerWidget != null) add(headerWidget).right().padRight(12);
                 return;
             } else {
                 add(theme.horizontalSeparator(title)).expandX();

@@ -26,6 +26,9 @@ import meteordevelopment.meteorclient.gui.widgets.input.WSlider;
 import meteordevelopment.meteorclient.gui.widgets.input.WTextBox;
 import meteordevelopment.meteorclient.gui.widgets.pressable.*;
 import meteordevelopment.meteorclient.renderer.text.TextRenderer;
+import meteordevelopment.meteorclient.renderer.Fonts;
+import meteordevelopment.meteorclient.gui.screens.ModulesScreen;
+import meteordevelopment.meteorclient.gui.screens.ModuleScreen;
 import meteordevelopment.meteorclient.settings.*;
 import meteordevelopment.meteorclient.systems.accounts.Account;
 import meteordevelopment.meteorclient.systems.modules.Module;
@@ -96,10 +99,26 @@ public class MeteorGuiTheme extends GuiTheme {
         .build()
     );
 
+    public enum UiEffects { Off, Balanced, High }
+
+    public final Setting<UiEffects> uiEffects = sgGeneral.add(new EnumSetting.Builder<UiEffects>()
+        .name("ui-effects")
+        .description("Quality of glass, shadows and glow in the modern UI.")
+        .defaultValue(UiEffects.High)
+        .build()
+    );
+
+    public final Setting<Boolean> uiAnimations = sgGeneral.add(new BoolSetting.Builder()
+        .name("ui-animations")
+        .description("Smooth hover, selection and switch transitions in the module browser.")
+        .defaultValue(true)
+        .build()
+    );
+
     // Colors
 
-    public final Setting<SettingColor> accentColor = color("accent", "Main color of the GUI.", new SettingColor(0, 245, 255));
-    public final Setting<SettingColor> checkboxColor = color("checkbox", "Color of checkbox.", new SettingColor(0, 245, 255));
+    public final Setting<SettingColor> accentColor = color("accent", "Main color of the GUI.", new SettingColor(77, 125, 255));
+    public final Setting<SettingColor> checkboxColor = color("checkbox", "Color of checkbox.", new SettingColor(77, 125, 255));
     public final Setting<SettingColor> plusColor = color("plus", "Color of plus button.", new SettingColor(50, 255, 50));
     public final Setting<SettingColor> minusColor = color("minus", "Color of minus button.", new SettingColor(255, 50, 50));
     public final Setting<SettingColor> favoriteColor = color("favorite", "Color of checked favorite button.", new SettingColor(250, 215, 0));
@@ -186,35 +205,35 @@ public class MeteorGuiTheme extends GuiTheme {
     public void applyModernPalette() {
         boolean light = modernLightMode.get();
 
-        SettingColor modernAccent = new SettingColor(0, 245, 255);
+        SettingColor modernAccent = new SettingColor(77, 125, 255);
         accentColor.set(modernAccent);
-        checkboxColor.set(new SettingColor(0, 245, 255));
-        sliderLeft.set(new SettingColor(0, 245, 255));
+        checkboxColor.set(new SettingColor(77, 125, 255));
+        sliderLeft.set(new SettingColor(77, 125, 255));
 
-        textColor.set(light ? new SettingColor(24, 27, 35) : new SettingColor(245, 247, 252));
+        textColor.set(light ? new SettingColor(24, 27, 35) : new SettingColor(255, 255, 255));
         titleTextColor.set(light ? new SettingColor(18, 21, 29) : new SettingColor(255, 255, 255));
-        textSecondaryColor.set(light ? new SettingColor(73, 79, 94) : new SettingColor(150, 158, 178));
+        textSecondaryColor.set(light ? new SettingColor(73, 79, 94) : new SettingColor(130, 133, 143));
         placeholderColor.set(light ? new SettingColor(62, 68, 82, 170) : new SettingColor(225, 230, 240, 145));
         separatorText.set(light ? new SettingColor(31, 35, 45) : new SettingColor(240, 243, 249));
         separatorCenter.set(light ? new SettingColor(91, 98, 114, 110) : new SettingColor(148, 158, 181, 105));
         separatorEdges.set(light ? new SettingColor(91, 98, 114, 28) : new SettingColor(148, 158, 181, 24));
 
         backgroundColor.set(
-            light ? new SettingColor(247, 248, 251, 245) : new SettingColor(18, 18, 18, 245),
-            light ? new SettingColor(236, 239, 244, 255) : new SettingColor(29, 31, 34, 255),
-            light ? new SettingColor(225, 229, 236, 255) : new SettingColor(39, 42, 46, 255)
+            light ? new SettingColor(247, 248, 251, 245) : new SettingColor(32, 39, 54, 255),
+            light ? new SettingColor(236, 239, 244, 255) : new SettingColor(40, 48, 65, 255),
+            light ? new SettingColor(225, 229, 236, 255) : new SettingColor(47, 57, 77, 255)
         );
         outlineColor.set(
-            light ? new SettingColor(111, 118, 132, 48) : new SettingColor(112, 123, 145, 42),
-            light ? new SettingColor(90, 98, 114, 68) : new SettingColor(127, 140, 165, 62),
-            light ? new SettingColor(76, 84, 101, 82) : new SettingColor(142, 156, 181, 74)
+            light ? new SettingColor(111, 118, 132, 48) : new SettingColor(255, 255, 255, 8),
+            light ? new SettingColor(90, 98, 114, 68) : new SettingColor(255, 255, 255, 18),
+            light ? new SettingColor(76, 84, 101, 82) : new SettingColor(255, 255, 255, 24)
         );
         scrollbarColor.set(
             light ? new SettingColor(159, 166, 179, 155) : new SettingColor(63, 68, 78, 180),
             light ? new SettingColor(132, 140, 155, 190) : new SettingColor(82, 89, 101, 210),
             light ? new SettingColor(111, 120, 137, 210) : new SettingColor(96, 104, 119, 225)
         );
-        sliderRight.set(light ? new SettingColor(183, 189, 201) : new SettingColor(50, 53, 59));
+        sliderRight.set(light ? new SettingColor(183, 189, 201) : new SettingColor(11, 18, 35));
     }
 
     private Setting<SettingColor> color(SettingGroup group, String name, String description, SettingColor color) {
@@ -410,12 +429,25 @@ public class MeteorGuiTheme extends GuiTheme {
 
     @Override
     public TextRenderer textRenderer() {
-        return TextRenderer.get();
+        return modernScreen() ? Fonts.uiRenderer() : TextRenderer.get();
+    }
+
+    private boolean modernScreen() {
+        return mc.gui.screen() instanceof ModulesScreen || mc.gui.screen() instanceof ModuleScreen;
     }
 
     @Override
+    public double textScale() { return modernScreen() ? 1.12 : 1; }
+
+    @Override
     public double scale(double value) {
-        double scaled = value * scale.get();
+        double factor = scale.get();
+        if (modernScreen()) {
+            factor = Math.min(factor, Math.min(
+                Math.max(1, mc.getWindow().getWidth() - 40) / NeverloseUi.DESIGN_WIDTH,
+                Math.max(1, mc.getWindow().getHeight() - 40) / NeverloseUi.DESIGN_HEIGHT));
+        }
+        double scaled = value * factor;
 
         if (MacosUtil.IS_MACOS) {
             scaled /= (double) mc.getWindow().getWidth() / mc.getWindow().getWidth();
