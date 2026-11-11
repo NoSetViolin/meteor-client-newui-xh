@@ -1,0 +1,23 @@
+Meteor source baseline: MeteorDevelopment/meteor-client v0.5.8,
+37c5c5c640ba9c66721e824c62e84bf1223c9cd6. Full GPL-3 text: /LICENSE-Meteor.
+
+Additional license texts absent from published dependency jars were retrieved from:
+https://raw.githubusercontent.com/MeteorDevelopment/orbit/master/LICENSE
+https://raw.githubusercontent.com/MeteorDevelopment/starscript/master/LICENSE
+https://raw.githubusercontent.com/MeteorDevelopment/discord-ipc/master/LICENSE
+https://raw.githubusercontent.com/netty/netty/netty-4.1.90.Final/LICENSE.txt
+https://raw.githubusercontent.com/netty/netty/netty-4.1.90.Final/NOTICE.txt
+https://raw.githubusercontent.com/ronmamo/reflections/0.10.2/COPYING.txt
+https://raw.githubusercontent.com/jboss-javassist/javassist/rel_3_28_0_ga/License.html
+
+The build also preserves license/notice entries from each bundled jar under its
+Maven coordinate and archives each dependency's POM. DEPENDENCIES.txt lists the
+resolved bundled artifacts. SLF4J and JSR-305 are supplied by NeoForge/Minecraft
+and are not included as classes in this mod.
+
+UI-only backport (fix3): NoSetViolin/meteor-client-newui-xh
+https://github.com/NoSetViolin/meteor-client-newui-xh
+Source revision: 57f838875e881ae0212f264388f8ec6899d6f50a
+Menu widgets, SDF surfaces and shaders adapted from Minecraft 26.2 to 1.21.1.
+Licensed under the existing Meteor GPL-3.0 license (LICENSE-Meteor).
+No gameplay module changes imported from the UI reference repository.

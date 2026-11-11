@@ -1,0 +1,4 @@
+XiaohSense branding and NeoForge derivative: NoSetViolin.
+Based on Meteor Client by MineGame159, squidoodly, seasnail and contributors.
+Upstream: https://github.com/MeteorDevelopment/meteor-client
+Meteor Client remains licensed under GPL-3.0; see LICENSE-Meteor.

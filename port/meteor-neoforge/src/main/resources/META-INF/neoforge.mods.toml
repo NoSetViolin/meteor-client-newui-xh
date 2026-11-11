@@ -1,0 +1,38 @@
+modLoader = "javafml"
+loaderVersion = "[4,)"
+license = "GPL-3.0"
+issueTrackerURL = "https://github.com/MeteorDevelopment/meteor-client/issues"
+
+[[mods]]
+modId = "meteor_client"
+version = "${version}"
+displayName = "XiaohSense"
+displayURL = "https://meteorclient.com"
+logoFile = "assets/meteor-client/icon.png"
+authors = "NoSetViolin"
+description = '''
+Based utility mod.
+'''
+# 纯客户端 mod：服务端缺该 mod 时不要把客户端踢掉
+displayTest = "IGNORE_ALL_VERSION"
+
+[[mixins]]
+config = "meteor-client.mixins.json"
+
+[[mixins]]
+config = "meteor-client-baritone.mixins.json"
+
+[[dependencies.meteor_client]]
+modId = "minecraft"
+type = "required"
+versionRange = "[1.21.1,1.21.2)"
+ordering = "NONE"
+side = "CLIENT"
+
+[[dependencies.meteor_client]]
+modId = "neoforge"
+type = "required"
+versionRange = "[21.1.265,21.2)"
+ordering = "NONE"
+side = "CLIENT"
+

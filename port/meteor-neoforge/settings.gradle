@@ -1,0 +1,12 @@
+pluginManagement {
+    repositories {
+        maven { name = 'WagYourMaven'; url = 'https://maven.wagyourtail.xyz/releases' }
+        maven { name = 'WagYourMavenSnapshots'; url = 'https://maven.wagyourtail.xyz/snapshots' }
+        maven { name = 'NeoForged'; url = 'https://maven.neoforged.net/' }
+        maven { name = 'Meteor'; url = 'https://maven.meteordev.org/releases' }
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
+rootProject.name = 'meteor-client-neoforge'

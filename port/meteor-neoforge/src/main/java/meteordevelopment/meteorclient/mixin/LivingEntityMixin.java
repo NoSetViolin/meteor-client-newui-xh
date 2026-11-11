@@ -1,0 +1,213 @@
+package meteordevelopment.meteorclient.mixin;
+
+import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
+import com.llamalad7.mixinextras.injector.ModifyReturnValue;
+import meteordevelopment.meteorclient.MeteorClient;
+import meteordevelopment.meteorclient.events.entity.DamageEvent;
+import meteordevelopment.meteorclient.events.entity.player.CanWalkOnFluidEvent;
+import meteordevelopment.meteorclient.systems.modules.Modules;
+import meteordevelopment.meteorclient.systems.modules.movement.Sprint;
+import meteordevelopment.meteorclient.systems.modules.movement.elytrafly.ElytraFlightModes;
+import meteordevelopment.meteorclient.systems.modules.movement.elytrafly.ElytraFly;
+import meteordevelopment.meteorclient.systems.modules.movement.elytrafly.modes.Bounce;
+import meteordevelopment.meteorclient.systems.modules.player.OffhandCrash;
+import meteordevelopment.meteorclient.systems.modules.player.PotionSpoof;
+import meteordevelopment.meteorclient.systems.modules.render.HandView;
+import meteordevelopment.meteorclient.systems.modules.render.NoRender;
+import meteordevelopment.meteorclient.utils.Utils;
+import net.minecraft.core.Holder;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.effect.MobEffect;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.material.FluidState;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Constant;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.ModifyArg;
+import org.spongepowered.asm.mixin.injection.ModifyConstant;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+
+@Mixin({LivingEntity.class})
+public abstract class LivingEntityMixin extends Entity {
+   @Unique
+   private boolean previousElytra = false;
+
+   public LivingEntityMixin(EntityType<?> type, Level world) {
+      super(type, world);
+   }
+
+   @Inject(
+      method = {"Lnet/minecraft/world/entity/LivingEntity;hurt(Lnet/minecraft/world/damagesource/DamageSource;F)Z"},
+      at = {@At("HEAD")}
+   )
+   private void onDamageHead(DamageSource source, float amount, CallbackInfoReturnable<Boolean> info) {
+      if (Utils.canUpdate() && this.level().isClientSide) {
+         MeteorClient.EVENT_BUS.post(DamageEvent.get((LivingEntity)(Object)this, source));
+      }
+   }
+
+   @ModifyReturnValue(
+      method = {"Lnet/minecraft/world/entity/LivingEntity;canStandOnFluid(Lnet/minecraft/world/level/material/FluidState;)Z"},
+      at = {@At("RETURN")}
+   )
+   private boolean onCanWalkOnFluid(boolean original, FluidState fluidState) {
+      if ((Object) this != MeteorClient.mc.player) {
+         return original;
+      } else {
+         CanWalkOnFluidEvent event = MeteorClient.EVENT_BUS.post(CanWalkOnFluidEvent.get(fluidState));
+         return event.walkOnFluid;
+      }
+   }
+
+   @Inject(
+      method = {"Lnet/minecraft/world/entity/LivingEntity;spawnItemParticles(Lnet/minecraft/world/item/ItemStack;I)V"},
+      at = {@At("HEAD")},
+      cancellable = true
+   )
+   private void spawnItemParticles(ItemStack stack, int count, CallbackInfo info) {
+      NoRender noRender = Modules.get().get(NoRender.class);
+      if (noRender.noEatParticles() && stack.getComponents().has(DataComponents.FOOD)) {
+         info.cancel();
+      }
+   }
+
+   @Inject(
+      method = {"Lnet/minecraft/world/entity/LivingEntity;onEquipItem(Lnet/minecraft/world/entity/EquipmentSlot;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/item/ItemStack;)V"},
+      at = {@At("HEAD")},
+      cancellable = true
+   )
+   private void onEquipStack(EquipmentSlot slot, ItemStack oldStack, ItemStack newStack, CallbackInfo info) {
+      if ((Object) this == MeteorClient.mc.player && Modules.get().get(OffhandCrash.class).isAntiCrash()) {
+         info.cancel();
+      }
+   }
+
+   @ModifyArg(
+      method = {"Lnet/minecraft/world/entity/LivingEntity;swing(Lnet/minecraft/world/InteractionHand;)V"},
+      at = @At(
+         value = "INVOKE",
+         target = "Lnet/minecraft/world/entity/LivingEntity;swing(Lnet/minecraft/world/InteractionHand;Z)V"
+      )
+   )
+   private InteractionHand setHand(InteractionHand hand) {
+      HandView handView = Modules.get().get(HandView.class);
+      if ((Object) this == MeteorClient.mc.player && handView.isActive()) {
+         if (handView.swingMode.get() == HandView.SwingMode.None) {
+            return hand;
+         } else {
+            return handView.swingMode.get() == HandView.SwingMode.Offhand ? InteractionHand.OFF_HAND : InteractionHand.MAIN_HAND;
+         }
+      } else {
+         return hand;
+      }
+   }
+
+   @ModifyConstant(
+      method = {"Lnet/minecraft/world/entity/LivingEntity;getCurrentSwingDuration()I"},
+      constant = {@Constant(
+         intValue = 6
+      )}
+   )
+   private int getHandSwingDuration(int constant) {
+      if ((Object) this != MeteorClient.mc.player) {
+         return constant;
+      } else {
+         return Modules.get().get(HandView.class).isActive() && MeteorClient.mc.options.getCameraType().isFirstPerson()
+            ? Modules.get().get(HandView.class).swingSpeed.get()
+            : constant;
+      }
+   }
+
+   @ModifyReturnValue(
+      method = {"Lnet/minecraft/world/entity/LivingEntity;isFallFlying()Z"},
+      at = {@At("RETURN")}
+   )
+   private boolean isFallFlyingHook(boolean original) {
+      return (Object) this == MeteorClient.mc.player && Modules.get().get(ElytraFly.class).canPacketEfly() ? true : original;
+   }
+
+   @Inject(
+      method = {"Lnet/minecraft/world/entity/LivingEntity;isFallFlying()Z"},
+      at = {@At("TAIL")},
+      cancellable = true
+   )
+   public void recastOnLand(CallbackInfoReturnable<Boolean> cir) {
+      boolean elytra = (Boolean)cir.getReturnValue();
+      ElytraFly elytraFly = Modules.get().get(ElytraFly.class);
+      if (this.previousElytra && !elytra && elytraFly.isActive() && elytraFly.flightMode.get() == ElytraFlightModes.Bounce) {
+         cir.setReturnValue(Bounce.recastElytra(MeteorClient.mc.player));
+      }
+
+      this.previousElytra = elytra;
+   }
+
+   @ModifyReturnValue(
+      method = {"Lnet/minecraft/world/entity/LivingEntity;hasEffect(Lnet/minecraft/core/Holder;)Z"},
+      at = {@At("RETURN")}
+   )
+   private boolean hasStatusEffect(boolean original, Holder<MobEffect> effect) {
+      // Vanilla checks the holder as a map key and need not resolve its value.
+      // Optional NeoForge effects (e.g. Petrolpark's Midas Touch) may be unbound.
+      if (!original) return false;
+      Modules modules = Modules.get();
+      PotionSpoof spoof = modules == null ? null : modules.get(PotionSpoof.class);
+      if (spoof == null || !spoof.isActive() || !effect.isBound()) return original;
+      return !spoof.shouldBlock(effect.value());
+   }
+
+   @ModifyExpressionValue(
+      method = {"Lnet/minecraft/world/entity/LivingEntity;jumpFromGround()V"},
+      at = {@At(
+         value = "INVOKE",
+         target = "Lnet/minecraft/world/entity/LivingEntity;getYRot()F"
+      )}
+   )
+   private float modifyGetYaw(float original) {
+      if ((Object) this != MeteorClient.mc.player) {
+         return original;
+      } else {
+         Sprint s = Modules.get().get(Sprint.class);
+         if (s.rageSprint() && s.jumpFix.get()) {
+            float forward = Math.signum(MeteorClient.mc.player.input.forwardImpulse);
+            float strafe = 90.0F * Math.signum(MeteorClient.mc.player.input.leftImpulse);
+            if (forward != 0.0F) {
+               strafe *= forward * 0.5F;
+            }
+
+            original -= strafe;
+            if (forward < 0.0F) {
+               original -= 180.0F;
+            }
+
+            return original;
+         } else {
+            return original;
+         }
+      }
+   }
+
+   @ModifyExpressionValue(
+      method = {"Lnet/minecraft/world/entity/LivingEntity;jumpFromGround()V"},
+      at = {@At(
+         value = "INVOKE",
+         target = "Lnet/minecraft/world/entity/LivingEntity;isSprinting()Z"
+      )}
+   )
+   private boolean modifyIsSprinting(boolean original) {
+      return (Object) this == MeteorClient.mc.player && Modules.get().get(Sprint.class).rageSprint()
+         ? original && (Math.abs(MeteorClient.mc.player.input.forwardImpulse) > 1.0E-5F || Math.abs(MeteorClient.mc.player.input.leftImpulse) > 1.0E-5F)
+         : original;
+   }
+}
+
+

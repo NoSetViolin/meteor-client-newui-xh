@@ -1,0 +1,240 @@
+plugins {
+    id 'java'
+    id 'xyz.wagyourtail.unimined' version '1.2.9'
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
+}
+
+group = 'meteordevelopment'
+version = '0.5.8-neoforge.8'
+
+java {
+    toolchain { languageVersion = JavaLanguageVersion.of(21) }
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
+
+repositories {
+    maven { name = 'Meteor'; url = 'https://maven.meteordev.org/releases' }
+    maven { name = 'MeteorSnapshots'; url = 'https://maven.meteordev.org/snapshots' }
+    maven { name = 'NeoForged'; url = 'https://maven.neoforged.net/releases' }
+    maven { name = 'ParchmentMC'; url = 'https://maven.parchmentmc.org' }
+    maven { name = 'Sponge'; url = 'https://repo.spongepowered.org/repository/maven-public/' }
+    mavenCentral()
+}
+
+unimined.minecraft {
+    version '1.21.1'
+
+    mappings {
+        mojmap()
+        parchment '1.20.6', '2024.05.01'
+    }
+
+    neoForged {
+        // unimined 1.2.9 会把 1.21.1 归一化为 "21.1" 再拼 "." + loader
+        loader '265'
+        accessTransformer file('src/main/resources/META-INF/accesstransformer.cfg')
+        mixinConfig ['meteor-client.mixins.json']
+        mixinConfig ['meteor-client-baritone.mixins.json']
+    }
+
+    defaultRemapJar = false
+
+    minecraftRemapper.config {
+        ignoreConflicts(true)
+    }
+}
+
+dependencies {
+    // 原 jar 里 shade 的普通库，按 Maven 坐标重新引入
+    implementation 'meteordevelopment:orbit:0.2.4'
+    implementation 'meteordevelopment:starscript:0.2.2'
+    implementation 'meteordevelopment:discord-ipc:1.1'
+    implementation 'org.reflections:reflections:0.10.2'
+    implementation('io.netty:netty-handler-proxy:4.1.90.Final') { transitive = false }
+    implementation('io.netty:netty-codec-socks:4.1.90.Final') { transitive = false }
+    implementation 'de.florianmichael:WaybackAuthLib:1.0.1'
+    compileOnly 'com.google.code.findbugs:jsr305:3.0.2'
+
+    // 可选集成：上一轮产出的 NeoForge 版 Baritone（只用于编译 baritone.api / ComeCommand）
+    compileOnly files('../../baritone-neoforge-1.21.1.jar')
+}
+
+// NeoForge 的 AT 只改 class 自身 flags，不改 InnerClasses 表 -> javac 仍视嵌套类为 private。
+// libs/mc-at-fixed.jar 是用 FixInnerClasses 处理过的 MC（只用于编译期可见性），置于 classpath 最前。
+configurations {
+    mcAtFix
+    mcFixTools
+}
+dependencies {
+    mcAtFix files(layout.buildDirectory.file('mc-at-fix/minecraft.jar'))
+    mcFixTools 'org.ow2.asm:asm:9.7'
+}
+
+def compileMcFix = tasks.register('compileMcFix', JavaCompile) {
+    source = fileTree('tools') { include '*.java' }
+    classpath = configurations.mcFixTools
+    destinationDirectory = layout.buildDirectory.dir('mc-fix-tool')
+    javaCompiler = javaToolchains.compilerFor { languageVersion = JavaLanguageVersion.of(21) }
+}
+
+def patchedMinecraft = providers.provider {
+    tasks.named('compileJava').get().classpath.files.find {
+        it.name.startsWith('neoforge-21.1.265-') && it.name.contains('-at+') && it.name.endsWith('.jar')
+    } ?: { throw new GradleException('NeoForge 21.1.265 AT jar missing from compile classpath') }()
+}
+
+def prepareMcAtFix = tasks.register('prepareMcAtFix', JavaExec) {
+    dependsOn compileMcFix
+    classpath = configurations.mcFixTools + files(compileMcFix.flatMap { it.destinationDirectory })
+    mainClass = 'FixInnerClasses'
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(21) }
+    inputs.file(patchedMinecraft)
+    inputs.file('src/main/resources/META-INF/accesstransformer.cfg')
+    outputs.file(layout.buildDirectory.file('mc-at-fix/minecraft.jar'))
+    doFirst {
+        def output = layout.buildDirectory.file('mc-at-fix/minecraft.jar').get().asFile
+        output.parentFile.mkdirs()
+        args patchedMinecraft.get().absolutePath, output.absolutePath,
+            file('src/main/resources/META-INF/accesstransformer.cfg').absolutePath
+    }
+}
+
+tasks.named('compileJava') {
+    dependsOn prepareMcAtFix
+    classpath = project.configurations.mcAtFix + classpath
+}
+
+def generateInitIndex = tasks.register('generateInitIndex', JavaExec) {
+    dependsOn tasks.named('compileJava'), compileMcFix
+    classpath = configurations.mcFixTools + files(compileMcFix.flatMap { it.destinationDirectory })
+    mainClass = 'GenerateInitIndex'
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(21) }
+    inputs.dir(layout.buildDirectory.dir('classes/java/main'))
+    outputs.file(layout.buildDirectory.file('generated/init-index/meteor-client-init.txt'))
+    args layout.buildDirectory.dir('classes/java/main').get().asFile.absolutePath,
+        layout.buildDirectory.file('generated/init-index/meteor-client-init.txt').get().asFile.absolutePath
+}
+
+processResources {
+    dependsOn generateInitIndex
+    from(layout.buildDirectory.dir('generated/init-index'))
+}
+
+// 依赖全部 shade 进 mod jar（NeoForge 无 jar-in-jar 需求）
+configurations {
+    shaded
+}
+configurations.shaded.exclude group: 'org.slf4j', module: 'slf4j-api'
+configurations.shaded.exclude group: 'com.google.code.findbugs', module: 'jsr305'
+dependencies {
+    shaded 'meteordevelopment:orbit:0.2.4'
+    shaded 'meteordevelopment:starscript:0.2.2'
+    shaded 'meteordevelopment:discord-ipc:1.1'
+    shaded 'org.reflections:reflections:0.10.2'
+    shaded('io.netty:netty-handler-proxy:4.1.90.Final') { transitive = false }
+    shaded('io.netty:netty-codec-socks:4.1.90.Final') { transitive = false }
+    shaded 'de.florianmichael:WaybackAuthLib:1.0.1'
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 21
+    // 反编译产物的告警噪音太大，只要 error
+    options.compilerArgs << '-nowarn' << '-Xlint:none' << '-XDignore.symbol.file' << '-Xmaxerrs' << '2000'
+}
+
+processResources {
+    inputs.property 'version', project.version
+    filesMatching('META-INF/neoforge.mods.toml') {
+        expand 'version': project.version
+    }
+}
+
+tasks.named('jar') { enabled = false }
+
+shadowJar {
+    archiveClassifier.set('')
+    configurations = [project.configurations.shaded]
+    mergeServiceFiles()
+    exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA'
+    exclude 'META-INF/maven/**', 'module-info.class', 'META-INF/versions/**'
+    // 原 jar 里的 fabric 残留/旧启动器不再需要
+    exclude 'fabric.mod.json'
+    exclude 'meteor-client-refmap.json'
+}
+
+def collectThirdPartyLicenses = tasks.register('collectThirdPartyLicenses') {
+    inputs.files(configurations.shaded)
+    outputs.dir(layout.buildDirectory.dir('generated/licenses'))
+    doLast {
+        def root = layout.buildDirectory.dir('generated/licenses/META-INF/licenses').get().asFile
+        root.mkdirs()
+        def coordinates = []
+        configurations.shaded.resolvedConfiguration.resolvedArtifacts.each { artifact ->
+            def coordinate = artifact.moduleVersion.id.toString()
+            coordinates << coordinate
+            def destination = new File(root, coordinate.replace(':', '/'))
+            destination.mkdirs()
+            new java.util.zip.ZipFile(artifact.file).withCloseable { zip ->
+                zip.entries().each { entry ->
+                    if (!entry.directory && entry.name.tokenize('/').last().matches('(?i)(license|notice|copying).*')) {
+                        def target = new File(destination, entry.name)
+                        target.parentFile.mkdirs()
+                        zip.getInputStream(entry).withCloseable { stream -> target.bytes = stream.bytes }
+                    }
+                }
+            }
+            def id = artifact.moduleVersion.id
+            def poms = configurations.detachedConfiguration(dependencies.create("${id.group}:${id.name}:${id.version}@pom"))
+            poms.files.each { pom -> new File(destination, 'pom.xml').bytes = pom.bytes }
+        }
+        new File(root, 'DEPENDENCIES.txt').text = coordinates.sort().join('\n') + '\n'
+    }
+}
+
+shadowJar {
+    dependsOn collectThirdPartyLicenses
+    from(layout.buildDirectory.dir('generated/licenses'))
+}
+
+tasks.register('sourceBundle', Zip) {
+    archiveBaseName = 'meteor-client-neoforge'
+    archiveClassifier = 'sources'
+    destinationDirectory = layout.buildDirectory.dir('distributions')
+    from(projectDir) {
+        into 'port/meteor-neoforge'
+        include 'src/**', 'tools/**', 'gradle/**', 'build.gradle', 'settings.gradle', 'gradle.properties', 'gradlew', 'gradlew.bat', '*.md'
+    }
+    from('../../baritone-neoforge-1.21.1.jar')
+    from('../meteor-remap/AuditMixins.java') { into 'port/meteor-remap' }
+    from('../baritone') {
+        into 'port/baritone'
+        exclude '**/.git/**', '**/.gradle/**', '**/build/**', '**/run/**', '**/.idea/**', '**/*.log'
+    }
+}
+
+build.dependsOn shadowJar
+
+
+
+
+
+// dev 运行期：FML 的 GAME 层清单只收 minecraft/forge 配置，普通依赖（orbit/starscript/...）不在其中。
+// 启动前把它们追加进 legacy_classpath.txt；发布的 jar 已 shade 这些库，不影响产物。
+tasks.matching { it.name == 'runClient' }.configureEach {
+    doFirst {
+        if (project.hasProperty('meteorSelfTest')) jvmArgs '-Dmeteor.selftest=true'
+        def cpFile = new File(project.projectDir, '.gradle/unimined/local/legacy_classpath.txt')
+        if (!cpFile.exists()) return
+        def lines = cpFile.readLines()
+        def added = []
+        project.configurations.shaded.files.each { f ->
+            if (f.exists() && !lines.contains(f.absolutePath)) { lines << f.absolutePath; added << f.name }
+        }
+        if (!added.isEmpty()) {
+            cpFile.text = lines.join(System.lineSeparator()) + System.lineSeparator()
+            logger.lifecycle("[meteor] injected into FML legacy classpath: " + added.join(', '))
+        }
+    }
+}

@@ -1,0 +1,30 @@
+START NeoForge=21.1.265 Meteor=0.5.8-neoforge.8 baritone=true sodium=true iris=true
+modules=172 settings=1271
+screenshot=Saved screenshot as meteor-00-startup.png
+PASS AntiPacketKick disabled/oversized/corrupt packet cases
+screenshot=Saved screenshot as meteor-01-clickgui.png
+screenshot=Saved screenshot as meteor-10-ui-chinese.png
+screenshot=Saved screenshot as meteor-11-ui-chinese-editor.png
+screenshot=Saved screenshot as meteor-07-ui-search.png
+screenshot=Saved screenshot as meteor-08-ui-settings.png
+PASS GUI search/right-click settings/back button/Insert open-close/RightShift unbound
+PASS dragged browser/configure/back/reopen share position x=157.0 y=25.0
+screenshot=Saved screenshot as meteor-09-ui-final.png
+FREECAM mouse delta result yaw=12.000001 pitch=6.0000005
+PASS Freecam mouse yaw/pitch, camera rotation, stationary player and normal rotation after disable
+PASS PotionSpoof bound/unbound holders, enabled/disabled, original true/false
+RENDER BACKEND sodium=true shaders=false
+PASS entered singleplayer world
+screenshot=Saved screenshot as meteor-02-xray-off.png
+PASS Xray active for 200 world ticks at default opacity=25
+screenshot=Saved screenshot as meteor-03-xray-default-opacity.png
+screenshot=Saved screenshot as meteor-04-xray-zero-opacity.png
+PASS Xray disabled and chunks rebuilt
+PASS ThirdPerson vanilla default, distance, height, front view, FOV multiplier ordering, first-person isolation, wall collision, Freecam precedence, disable restoration
+PASS base FOV event base=70.0 changed=35.0 hand=70.0
+screenshot=Saved screenshot as meteor-05-xray-disabled-again.png
+PASS Baritone help command
+PASS six native tooltip factories rendered
+screenshot=Saved screenshot as meteor-06-six-tooltips.png
+PASS config saved
+PASS smoke test completed; screenshots require visual inspection
