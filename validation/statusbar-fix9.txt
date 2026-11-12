@@ -1,0 +1,17 @@
+START MC 1.21.1 / NeoForge 21.1.265 / 0.5.8-neoforge.9
+PASS default status bar scale is 80 percent
+VALUES [MeteorTest, 59 FPS, Singleplayer, 1.21.1, 0 ms, 20.0 TPS] HUD.active=false
+PASS real server-time packets reached the existing TPS sampler
+PASS live logged-in username
+PASS live FPS
+PASS singleplayer and actual MC version
+PASS player-list ping
+PASS default menu scale is 100 percent
+PASS sampled TPS after world updates
+PASS no pending OpenGL errors
+PASS 125 percent option scales the entire menu to 125 percent
+PASS 125 percent option scales the status bar to 110 percent
+PASS menu remains open while changing UI size
+PASS menu returns to 100 percent without reopening
+PASS UI size survives settings serialization
+PASS status bar integration completed; inspect screenshots for alignment, blur and rounding

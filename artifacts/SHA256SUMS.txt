@@ -1,1 +1,2 @@
 777df2a736b620ea43a438bfeffa2488720dce35489d1fc574d570e61a34202a  xiaohsense-0.5.8-mc1.21.1-neoforge21.1.265-fix8.jar
+2fb666ebcd8ac4c98075848d79380a332a4732dd330cf41caf418825aa2c091c  xiaohsense-0.5.8-mc1.21.1-neoforge21.1.265-fix9.jar

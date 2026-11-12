@@ -8,6 +8,7 @@ import meteordevelopment.meteorclient.utils.render.color.Color;
 /** Independent menu font: never changes the HUD or the user's configured font. */
 public final class UiFonts implements TextRenderer {
     private static UiFonts instance;
+    private static UiFonts status;
     private static TextRenderer legacyBase;
     private static UiFonts legacy;
     private final TextRenderer latin;
@@ -29,6 +30,18 @@ public final class UiFonts implements TextRenderer {
         fallback.scale = fallbackRatio * 2;
     }
     public static TextRenderer renderer() { if (instance == null) instance=new UiFonts(); return instance; }
+    /** Dedicated status typography; menu animation/scale cannot change this renderer. */
+    public static TextRenderer statusRenderer() {
+        if (status == null) {
+            FontFace face = Fonts.DEFAULT_FONT;
+            for (String name : new String[] {"Segoe UI", "Inter", "Noto Sans", "Arial"}) {
+                FontFamily family = Fonts.getFamily(name);
+                if (family != null && family.get(FontInfo.Type.Bold) != null) { face=family.get(FontInfo.Type.Bold); break; }
+            }
+            status = new UiFonts(new CustomTextRenderer(face));
+        }
+        return status;
+    }
     /** Preserve the selected Latin face on older menu pages while adding Unicode fallback. */
     public static TextRenderer withFallback(TextRenderer base) {
         if (base instanceof UiFonts) return base;

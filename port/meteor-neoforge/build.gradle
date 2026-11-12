@@ -5,7 +5,7 @@ plugins {
 }
 
 group = 'meteordevelopment'
-version = '0.5.8-neoforge.8'
+version = '0.5.8-neoforge.9'
 
 java {
     toolchain { languageVersion = JavaLanguageVersion.of(21) }

@@ -16,6 +16,7 @@ import meteordevelopment.meteorclient.gui.utils.Cell;
 import meteordevelopment.meteorclient.gui.widgets.containers.WContainer;
 import meteordevelopment.meteorclient.gui.widgets.containers.WView;
 import meteordevelopment.meteorclient.gui.widgets.input.WTextBox;
+import meteordevelopment.meteorclient.gui.widgets.input.WDropdown;
 import meteordevelopment.meteorclient.gui.widgets.pressable.WPressable;
 import meteordevelopment.meteorclient.systems.Systems;
 import meteordevelopment.meteorclient.systems.config.Config;
@@ -80,6 +81,7 @@ public class ModulesScreen extends TabScreen {
         private WTextBox search;
         private WToolbarButton save;
         private WModeButton mode;
+        private WDropdown<MeteorGuiTheme.UiSize> uiSize;
         private WView moduleView;
         private boolean searchActive;
         private double dragOffsetX, dragOffsetY;
@@ -92,6 +94,14 @@ public class ModulesScreen extends TabScreen {
             search = add(theme.textBox("", "Search modules")).widget();
             search.action = this::onSearchChanged;
             mode = add(new WModeButton()).widget();
+            if (theme instanceof MeteorGuiTheme meteorTheme) {
+                uiSize = add(theme.dropdown(meteorTheme.uiSize.get())).widget();
+                uiSize.tooltip = meteorTheme.uiSize.description;
+                uiSize.action = () -> {
+                    meteorTheme.uiSize.set(uiSize.get());
+                    meteordevelopment.meteorclient.gui.GuiThemes.save();
+                };
+            }
 
             for (NavigationItem item : navigation) tabs.add(add(new WNavigationTab(item)).widget());
 
@@ -198,6 +208,14 @@ public class ModulesScreen extends TabScreen {
         }
 
         @Override
+        public void calculateSize() {
+            // WView applies maxHeight while calculating its own size. Keep this
+            // value in step with the theme before the child tree is measured.
+            if (moduleView != null) moduleView.maxHeight = s(420);
+            super.calculateSize();
+        }
+
+        @Override
         protected void onCalculateSize() {
             width = s(NeverloseUi.DESIGN_WIDTH);
             height = s(NeverloseUi.DESIGN_HEIGHT);
@@ -220,6 +238,12 @@ public class ModulesScreen extends TabScreen {
             mode.y = y + s(29);
             mode.width = s(66);
             mode.height = s(34);
+            if (uiSize != null) {
+                uiSize.x = x + s(490);
+                uiSize.y = y + s(537);
+                uiSize.width = s(92);
+                uiSize.height = s(30);
+            }
 
             double tabY = y + s(114);
             int libraryIndex = 0;
@@ -258,6 +282,7 @@ public class ModulesScreen extends TabScreen {
             long active = visible.stream().filter(Module::isActive).count();
             renderer.textScaled(visible.size() + " modules  /  " + active + " enabled", x + s(216), y + s(58), NeverloseUi.muted(theme), 0.78);
             renderer.textScaled("Left click to toggle", x + s(216), y + s(550), NeverloseUi.muted(theme), 0.72);
+            if (uiSize != null) renderer.textScaled("UI 大小", x + s(428), y + s(548), NeverloseUi.muted(theme), 0.78);
             String hint = "Right click to configure";
             renderer.textScaled(hint, x + s(806) - theme.textWidth(hint) * 0.72, y + s(550), NeverloseUi.muted(theme), 0.72);
         }

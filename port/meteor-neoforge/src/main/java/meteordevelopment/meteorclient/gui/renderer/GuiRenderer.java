@@ -34,6 +34,8 @@ public class GuiRenderer {
    public static GuiTexture FAVORITE_NO;
    public static GuiTexture FAVORITE_YES;
    public static GuiTexture BRAND_LOGO;
+   public static GuiTexture STATUS_LOGO;
+   public static final GuiTexture[] STATUS_ICONS = new GuiTexture[6];
    public GuiTheme theme;
    private final Renderer2D r = new Renderer2D(false);
    private final Renderer2D rTex = new Renderer2D(true);
@@ -77,12 +79,21 @@ public class GuiRenderer {
       FAVORITE_NO = addTexture(MeteorClient.identifier("textures/icons/gui/favorite_no.png"));
       FAVORITE_YES = addTexture(MeteorClient.identifier("textures/icons/gui/favorite_yes.png"));
       BRAND_LOGO = addTexture(MeteorClient.identifier("textures/icons/gui/xiaohsense.jpg"));
+      STATUS_LOGO = addTexture(MeteorClient.identifier("textures/icons/status/xh.png"));
+      String[] statusIcons = {"user", "fps", "server", "version", "ping", "tps"};
+      for (int i = 0; i < statusIcons.length; i++) {
+         STATUS_ICONS[i] = addTexture(MeteorClient.identifier("textures/icons/status/" + statusIcons[i] + ".png"));
+      }
       TEXTURE = TEXTURE_PACKER.pack();
    }
 
    public void begin(GuiGraphics drawContext) {
+      begin(drawContext, true);
+   }
+
+   public void begin(GuiGraphics drawContext, boolean captureMenuBackdrop) {
       this.drawContext = drawContext;
-      if (meteordevelopment.meteorclient.gui.themes.meteor.ModernWidgetStyle.isModernScreen()) backdrop.capture();
+      if (captureMenuBackdrop && meteordevelopment.meteorclient.gui.themes.meteor.ModernWidgetStyle.isModernScreen()) backdrop.capture();
       GL.enableBlend();
       GL.enableScissorTest();
       this.scissorStart(0.0, 0.0, (double)Utils.getWindowWidth(), (double)Utils.getWindowHeight());

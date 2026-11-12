@@ -43,6 +43,7 @@ public abstract class InGameHudMixin {
       MeteorClient.EVENT_BUS.post(Render2DEvent.get(context, context.guiWidth(), context.guiWidth(), tickCounter.getGameTimeDeltaPartialTick(true)));
       Utils.scaledProjection();
       RenderSystem.applyModelViewMatrix();
+      meteordevelopment.meteorclient.gui.renderer.StatusBar.render(context);
       this.minecraft.getProfiler().pop();
    }
 

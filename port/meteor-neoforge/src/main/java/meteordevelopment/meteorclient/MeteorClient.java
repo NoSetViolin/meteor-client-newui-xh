@@ -85,7 +85,9 @@ public class MeteorClient {
       Systems.load();
       ReflectInit.init(PostInit.class);
 
-      if (Boolean.getBoolean("meteor.selftest")) {
+      if (Boolean.getBoolean("meteor.statusbar.selftest")) {
+         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(new StatusBarSelfTest()::tick);
+      } else if (Boolean.getBoolean("meteor.selftest")) {
          net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(new PortSelfTest()::tick);
       }
 

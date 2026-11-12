@@ -51,7 +51,7 @@ if (!(Test-Path -LiteralPath (Join-Path $instance 'options.txt'))) {
     @('version:3955','onboardAccessibility:false','pauseOnLostFocus:false','renderDistance:8','simulationDistance:5','maxFps:60') |
         Set-Content -LiteralPath (Join-Path $instance 'options.txt') -Encoding utf8NoBOM
 }
-Copy-Item -LiteralPath (Join-Path $project 'build/libs/meteor-client-neoforge-0.5.8-neoforge.8.jar') -Destination (Join-Path $instance 'mods/meteor-client-neoforge.jar')
+Copy-Item -LiteralPath (Join-Path $project 'build/libs/meteor-client-neoforge-0.5.8-neoforge.9.jar') -Destination (Join-Path $instance 'mods/meteor-client-neoforge.jar')
 if ($WithBaritone) {
     Copy-Item -LiteralPath (Join-Path $project '../../baritone-neoforge-1.21.1.jar') -Destination (Join-Path $instance 'mods/baritone-neoforge.jar')
 } elseif (Test-Path -LiteralPath (Join-Path $instance 'mods/baritone-neoforge.jar')) {

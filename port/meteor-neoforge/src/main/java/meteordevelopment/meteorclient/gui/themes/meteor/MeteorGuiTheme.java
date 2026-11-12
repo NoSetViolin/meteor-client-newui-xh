@@ -71,6 +71,26 @@ public class MeteorGuiTheme extends GuiTheme {
    private final SettingGroup sgScrollbar = this.settings.createGroup("Scrollbar");
    private final SettingGroup sgSlider = this.settings.createGroup("Slider");
    private final SettingGroup sgStarscript = this.settings.createGroup("Starscript");
+   public enum UiSize {
+      Default("100%", 1.0, 0.8), Large("125%", 1.25, 1.1);
+
+      private final String label;
+      public final double menuScale, statusBarScale;
+      UiSize(String label, double menuScale, double statusBarScale) {
+         this.label = label;
+         this.menuScale = menuScale;
+         this.statusBarScale = statusBarScale;
+      }
+      @Override public String toString() { return label; }
+   }
+   public final Setting<UiSize> uiSize = this.sgGeneral.add(new EnumSetting.Builder<UiSize>()
+      .name("ui-size")
+      .description("UI 大小：100% 为菜单原尺寸、状态栏 80%；125% 为菜单 125%、状态栏 110%。")
+      .defaultValue(UiSize.Default)
+      .onChanged(value -> {
+         if (MeteorClient.mc != null && MeteorClient.mc.screen instanceof WidgetScreen screen) screen.invalidate();
+      })
+      .build());
    public final Setting<Double> scale = this.sgGeneral
       .add(
          new DoubleSetting.Builder()
@@ -421,7 +441,7 @@ public class MeteorGuiTheme extends GuiTheme {
    @Override public double textScale() { return modernScreen() ? 1.12 : 1; }
    @Override
    public double scale(double value) {
-      double factor = this.scale.get();
+      double factor = this.scale.get() * this.uiSize.get().menuScale;
       if (modernScreen()) factor = Math.min(factor, Math.min(Math.max(1, MeteorClient.mc.getWindow().getWidth() - 40) / NeverloseUi.DESIGN_WIDTH, Math.max(1, MeteorClient.mc.getWindow().getHeight() - 40) / NeverloseUi.DESIGN_HEIGHT));
       double scaled = value * factor;
       if (Minecraft.ON_OSX) {
